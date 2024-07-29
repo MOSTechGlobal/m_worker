@@ -123,7 +123,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
         return Padding(
           padding: const EdgeInsets.all(8.0),
           child: Card(
-            color: colorScheme.secondaryContainer,
+            color: colorScheme.secondaryContainer.withOpacity(0.2),
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(

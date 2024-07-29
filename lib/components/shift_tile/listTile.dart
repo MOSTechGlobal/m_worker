@@ -94,19 +94,25 @@ class mShiftTile extends StatelessWidget {
                               fontSize: 14, color: colorScheme.secondary),
                         ),
                         const SizedBox(height: 5),
-                        Card(
-                          color: colorScheme.primaryContainer.withOpacity(0.5),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
-                              style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Card(
+                              color: colorScheme.primaryContainer.withOpacity(0.5),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+
+                                  '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary),
+                                ),
+                              ),
                             ),
-                          ),
-                        )
+                          ],
+                        ),
                       ],
                     ),
                   ),

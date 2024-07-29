@@ -5,8 +5,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_slider_drawer/flutter_slider_drawer.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
+import 'package:m_worker/components/drawer.dart';
 import 'package:m_worker/components/shift_tile/listTile.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/weather/weather_widget.dart';
@@ -114,145 +116,164 @@ class _HomePageState extends State<HomePage> {
       builder: (context, state) {
         final colorScheme = Theme.of(context).colorScheme;
         return Scaffold(
-          appBar: AppBar(
-            centerTitle: true,
-            title: ImageIcon(
-              const AssetImage('assets/images/logo.png'),
-              color: colorScheme.primary,
-              size: 40,
+          body: SliderDrawer(
+            key: const ValueKey('slider_drawer'),
+            appBar: SliderAppBar(
+              isTitleCenter: true,
+              appBarColor: colorScheme.surface,
+              title: ImageIcon(
+                const AssetImage('assets/images/logo.png'),
+                color: colorScheme.primary,
+                size: 40,
+              ),
+              drawerIconColor: colorScheme.primary,
             ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout),
-                onPressed: _signOut,
-              ),
-            ],
-          ),
-          body: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              WeatherWidget(
-                city: 'Sydney',
-                userName: _worker['FirstName'] ?? 'Worker',
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      _selectedSegment.contains('Today')
-                          ? DateFormat('EE d MMMM').format(DateTime.now())
-                          : 'Fortnight\'s Shifts',
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: colorScheme.secondary.withOpacity(0.7)),
-                    ),
-                    SegmentedButton(
-                      style: ButtonStyle(
-                        visualDensity: VisualDensity.compact,
-                        enableFeedback: true,
-                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                          (Set<WidgetState> states) {
-                            if (states.contains(WidgetState.disabled)) {
-                              return colorScheme.secondary;
-                            }
-                            return colorScheme.secondary;
-                          },
+            slider: mDrawer(
+              userName: _worker['FirstName'] ?? 'Worker',
+              colorScheme: colorScheme,
+              onSignOut: _signOut,
+            ),
+            child: Container(
+              color: colorScheme.surface,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  WeatherWidget(
+                    city: 'Sydney',
+                    userName: _worker['FirstName'] ?? 'Worker',
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedSegment.contains('Today')
+                              ? DateFormat('EE d MMMM').format(DateTime.now())
+                              : 'Fortnight\'s Shifts',
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: colorScheme.secondary.withOpacity(0.7)),
                         ),
-                        animationDuration: const Duration(milliseconds: 300),
-                      ),
-                      showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: 'Today', label: Text('Today')),
-                        ButtonSegment(
-                            value: 'Fortnight', label: Text('Fortnight')),
-                      ],
-                      selected: _selectedSegment,
-                      onSelectionChanged: (Set<String> newSelection) {
-                        if (newSelection.contains('Today')) {
-                          setState(() {
-                            errorMessage = null;
-                            isLoading = true;
-                            _selectedSegment.clear();
-                            _selectedSegment.add('Today');
-                          });
-                          _fetchWorkerShifts();
-                        } else {
-                          setState(() {
-                            _selectedSegment.clear();
-                            _selectedSegment.add('Fortnight');
-                            errorMessage = null;
-                          });
-                          _fetchWorkerShifts();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: SizedBox(
-                          width: 150,
-                          child: LinearProgressIndicator(),
-                        ),
-                      )
-                    : errorMessage != null
-                        ? Center(
-                            child: Text(errorMessage!,
-                                style: TextStyle(color: colorScheme.primary)))
-                        : RefreshIndicator(
-                            onRefresh: _fetchWorkerShifts,
-                            child: ListView.builder(
-itemCount: _selectedSegment.contains('Today')
-                                  ? todayShifts.length
-                                  : sortedFortnightDates.length,
-                              itemBuilder: (context, index) {
-                                if (_selectedSegment.contains('Today')) {
-                                  return mShiftTile(
-                                    date: 'Today',
-                                    shiftsForDate: todayShifts,
-                                    colorScheme: colorScheme,
-                                  );
-                                } else {
-                                  final date = sortedFortnightDates[index];
-                                  return Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        date,
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            color: colorScheme.secondary),
-                                      ),
-                                      ListView.builder(
-                                        shrinkWrap: true,
-                                        physics:
-                                            const NeverScrollableScrollPhysics(),
-                                        itemCount:
-                                            groupedFortnightShifts[date]!.length,
-                                        itemBuilder: (context, shiftIndex) {
-                                          final shift =
-                                              groupedFortnightShifts[date]![shiftIndex];
-                                          return mShiftTile(
-                                            date: date,
-                                            shiftsForDate: [shift],
-                                            colorScheme: colorScheme,
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  );
+                        SegmentedButton(
+                          style: ButtonStyle(
+                            visualDensity: VisualDensity.compact,
+                            padding: WidgetStateProperty.resolveWith<EdgeInsets>(
+                              (Set<WidgetState> states) {
+                                if (states.contains(WidgetState.hovered)) {
+                                  return const EdgeInsets.all(10);
                                 }
+                                return const EdgeInsets.all(10);
                               },
                             ),
+                            enableFeedback: true,
+                            foregroundColor:
+                                WidgetStateProperty.resolveWith<Color>(
+                              (Set<WidgetState> states) {
+                                if (states.contains(WidgetState.disabled)) {
+                                  return colorScheme.secondary;
+                                }
+                                return colorScheme.secondary;
+                              },
+                            ),
+                            animationDuration: const Duration(milliseconds: 300),
                           ),
-              )
-            ],
+                          showSelectedIcon: false,
+                          segments: const [
+                            ButtonSegment(value: 'Today', label: Text('Today')),
+                            ButtonSegment(
+                                value: 'Fortnight', label: Text('Fortnight')),
+                          ],
+                          selected: _selectedSegment,
+                          onSelectionChanged: (Set<String> newSelection) {
+                            if (newSelection.contains('Today')) {
+                              setState(() {
+                                errorMessage = null;
+                                isLoading = true;
+                                _selectedSegment.clear();
+                                _selectedSegment.add('Today');
+                              });
+                              _fetchWorkerShifts();
+                            } else {
+                              setState(() {
+                                _selectedSegment.clear();
+                                _selectedSegment.add('Fortnight');
+                                errorMessage = null;
+                              });
+                              _fetchWorkerShifts();
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: isLoading
+                        ? const Center(
+                            child: SizedBox(
+                              width: 150,
+                              child: LinearProgressIndicator(),
+                            ),
+                          )
+                        : errorMessage != null
+                            ? Center(
+                                child: Text(errorMessage!,
+                                    style: TextStyle(color: colorScheme.primary)))
+                            : RefreshIndicator(
+                                onRefresh: _fetchWorkerShifts,
+                                child: ListView.builder(
+                                  itemCount: _selectedSegment.contains('Today')
+                                      ? todayShifts.length
+                                      : sortedFortnightDates.length,
+                                  itemBuilder: (context, index) {
+                                    if (_selectedSegment.contains('Today')) {
+                                      return mShiftTile(
+                                        date: 'Today',
+                                        shiftsForDate: todayShifts,
+                                        colorScheme: colorScheme,
+                                      );
+                                    } else {
+                                      final date = sortedFortnightDates[index];
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            date,
+                                            style: TextStyle(
+                                                fontSize: 16,
+                                                color: colorScheme.secondary),
+                                          ),
+                                          ListView.builder(
+                                            shrinkWrap: true,
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            itemCount:
+                                                groupedFortnightShifts[date]!
+                                                    .length,
+                                            itemBuilder: (context, shiftIndex) {
+                                              final shift =
+                                                  groupedFortnightShifts[date]![
+                                                      shiftIndex];
+                                              return mShiftTile(
+                                                date: date,
+                                                shiftsForDate: [shift],
+                                                colorScheme: colorScheme,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                  },
+                                ),
+                              ),
+                  )
+                ],
+              ),
+            ),
           ),
         );
       },
