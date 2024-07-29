@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:m_worker/components/mTextField.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/utils/api.dart';
 
@@ -21,6 +22,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late String _email = '';
   late String _password = '';
+  late String _company = '';
   bool _isLoading = false;
   String errorMsg = '';
 
@@ -128,16 +130,16 @@ class _LoginPageState extends State<LoginPage> {
                               elevation: 0,
                               color: colorScheme.primary,
                               child: Container(
-                                height: 400,
+                                height: 300,
                               ),
                             ),
                             Positioned(
-                              top: 120,
+                              top: 80,
                               child: Column(
                                 children: [
-                                  Icon(
-                                    Icons.cases_rounded,
-                                    size: 100,
+                                  ImageIcon(
+                                    const AssetImage('assets/images/logo.png'),
+                                    size: 80,
                                     color: colorScheme.inversePrimary,
                                   ),
                                   const SizedBox(height: 25),
@@ -178,57 +180,29 @@ class _LoginPageState extends State<LoginPage> {
                                     ),
                                   ),
                                   const SizedBox(height: 30),
-                                  TextField(
+                                  MTextField(
+                                    onChanged: (value) {
+                                      _company = value;
+                                    },
+                                    colorScheme: colorScheme,
+                                    labelText: 'Company',
+                                  ),
+                                  const SizedBox(height: 30),
+                                  MTextField(
                                     onChanged: (value) {
                                       _email = value;
                                     },
-                                    style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 20,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'Email',
-                                      labelStyle: TextStyle(
-                                        color: colorScheme.primary,
-                                      ),
-                                      enabledBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
+                                    colorScheme: colorScheme,
+                                    labelText: 'Email',
                                   ),
                                   const SizedBox(height: 24),
-                                  TextField(
+                                  MTextField(
                                     onChanged: (value) {
                                       _password = value;
                                     },
-                                    style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 20,
-                                    ),
-                                    decoration: InputDecoration(
-                                      labelText: 'Password',
-                                      labelStyle: TextStyle(
-                                        color: colorScheme.primary,
-                                      ),
-                                      enabledBorder: UnderlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(
-                                          color: colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    obscureText: true,
+                                    colorScheme: colorScheme,
+                                    labelText: 'Password',
+                                    isPassword: true,
                                   ),
                                   const SizedBox(height: 40),
                                   _isLoading

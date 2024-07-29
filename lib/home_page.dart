@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
+import 'package:m_worker/components/shift_tile/listTile.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/weather/weather_widget.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,6 +21,9 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late List<dynamic> shifts = [];
   late dynamic workerData = [];
+  late dynamic _worker = {};
+
+  final Set<String> _selectedSegment = {'Today'};
   String? errorMessage;
   bool isLoading = true;
 
@@ -29,24 +34,26 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchWorkerShifts() async {
     final user = FirebaseAuth.instance.currentUser!.email;
     try {
-      final worker = await Api.get('getWorkerMasterDataByEmail/$user');
+      final res = await Api.get('getWorkerMasterDataByEmail/$user');
+      _worker = res['data'];
       final workerShifts =
-          await Api.get('getShiftMainDataByWorkerID/${worker['data']['WorkerID']}');
+          await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
         try {
           await Api.post('upsertFCMToken', {
-            'WorkerID': worker['data']['WorkerID'],
+            'WorkerID': _worker['WorkerID'],
             'FCMToken': fcmToken,
           });
         } catch (e) {
           log('Error inserting FCM token: $e');
         }
       }
-      setState(() {
+      if (_selectedSegment.contains('Today')) {
         shifts = workerShifts['data'] ?? [];
-        workerData = worker['data'] ?? [];
-      });
+      } else {
+        shifts = workerShifts['data'] ?? [];
+      }
       if (shifts.isEmpty) {
         setState(() {
           errorMessage = 'No shifts found';
@@ -67,22 +74,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
   }
 
-  String calculateShiftDuration(String shiftStart, String shiftEnd) {
-    final start =
-        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftStart, true);
-    var end = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftEnd, true);
-
-    if (end.isBefore(start)) {
-      end = end.add(const Duration(days: 1));
-    }
-
-    final duration = end.difference(start);
-
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes.remainder(60);
-    return '$hours hours $minutes minutes';
-  }
-
   bool isSameDay(DateTime date1, DateTime date2) {
     return date1.year == date2.year &&
         date1.month == date2.month &&
@@ -93,20 +84,26 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     final today = DateTime.now().toUtc();
 
-    final futureShifts = shifts.where((shift) {
+    final todayShifts = shifts.where((shift) {
       final shiftStart = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
           .parse(shift['ShiftStart'], true);
-      return isSameDay(shiftStart, today) || shiftStart.isAfter(today);
+      return isSameDay(shiftStart, today);
     }).toList();
 
-    final groupedShifts = groupBy(futureShifts, (shift) {
+    final fortnightShifts = shifts.where((shift) {
+      final shiftStart = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+          .parse(shift['ShiftStart'], true);
+      return shiftStart.isAfter(today) &&
+          shiftStart.isBefore(today.add(const Duration(days: 14)));
+    }).toList();
+
+    final groupedFortnightShifts = groupBy(fortnightShifts, (shift) {
       final shiftStart = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
           .parse(shift['ShiftStart'], true);
       return DateFormat('yyyy-MM-dd').format(shiftStart);
     });
 
-    // Sort dates in ascending order and as per time
-    final sortedDates = groupedShifts.keys.toList()
+    final sortedFortnightDates = groupedFortnightShifts.keys.toList()
       ..sort((a, b) {
         final dateA = DateTime.parse(a);
         final dateB = DateTime.parse(b);
@@ -118,7 +115,12 @@ class _HomePageState extends State<HomePage> {
         final colorScheme = Theme.of(context).colorScheme;
         return Scaffold(
           appBar: AppBar(
-            title: const Text('My Shifts'),
+            centerTitle: true,
+            title: ImageIcon(
+              const AssetImage('assets/images/logo.png'),
+              color: colorScheme.primary,
+              size: 40,
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.logout),
@@ -126,99 +128,134 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          body: isLoading
-              ? const Center(
-                  child: SizedBox(
-                  width: 150,
-                  child: LinearProgressIndicator(),
-                ))
-              : errorMessage != null
-                  ? Center(
-                      child: Text(errorMessage!,
-                          style: TextStyle(color: colorScheme.primary)))
-                  : RefreshIndicator(
-                      onRefresh: _fetchWorkerShifts,
-                      child: ListView.builder(
-                        itemCount: sortedDates.length,
-                        itemBuilder: (context, index) {
-                          final date = sortedDates[index];
-                          final shiftsForDate = groupedShifts[date]!;
-                          return _buildDateSection(
-                              date, shiftsForDate, colorScheme);
-                        },
-                      ),
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              WeatherWidget(
+                city: 'Sydney',
+                userName: _worker['FirstName'] ?? 'Worker',
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _selectedSegment.contains('Today')
+                          ? DateFormat('EE d MMMM').format(DateTime.now())
+                          : 'Fortnight\'s Shifts',
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: colorScheme.secondary.withOpacity(0.7)),
                     ),
+                    SegmentedButton(
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        enableFeedback: true,
+                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                          (Set<WidgetState> states) {
+                            if (states.contains(WidgetState.disabled)) {
+                              return colorScheme.secondary;
+                            }
+                            return colorScheme.secondary;
+                          },
+                        ),
+                        animationDuration: const Duration(milliseconds: 300),
+                      ),
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: 'Today', label: Text('Today')),
+                        ButtonSegment(
+                            value: 'Fortnight', label: Text('Fortnight')),
+                      ],
+                      selected: _selectedSegment,
+                      onSelectionChanged: (Set<String> newSelection) {
+                        if (newSelection.contains('Today')) {
+                          setState(() {
+                            errorMessage = null;
+                            isLoading = true;
+                            _selectedSegment.clear();
+                            _selectedSegment.add('Today');
+                          });
+                          _fetchWorkerShifts();
+                        } else {
+                          setState(() {
+                            _selectedSegment.clear();
+                            _selectedSegment.add('Fortnight');
+                            errorMessage = null;
+                          });
+                          _fetchWorkerShifts();
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: isLoading
+                    ? const Center(
+                        child: SizedBox(
+                          width: 150,
+                          child: LinearProgressIndicator(),
+                        ),
+                      )
+                    : errorMessage != null
+                        ? Center(
+                            child: Text(errorMessage!,
+                                style: TextStyle(color: colorScheme.primary)))
+                        : RefreshIndicator(
+                            onRefresh: _fetchWorkerShifts,
+                            child: ListView.builder(
+itemCount: _selectedSegment.contains('Today')
+                                  ? todayShifts.length
+                                  : sortedFortnightDates.length,
+                              itemBuilder: (context, index) {
+                                if (_selectedSegment.contains('Today')) {
+                                  return mShiftTile(
+                                    date: 'Today',
+                                    shiftsForDate: todayShifts,
+                                    colorScheme: colorScheme,
+                                  );
+                                } else {
+                                  final date = sortedFortnightDates[index];
+                                  return Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        date,
+                                        style: TextStyle(
+                                            fontSize: 16,
+                                            color: colorScheme.secondary),
+                                      ),
+                                      ListView.builder(
+                                        shrinkWrap: true,
+                                        physics:
+                                            const NeverScrollableScrollPhysics(),
+                                        itemCount:
+                                            groupedFortnightShifts[date]!.length,
+                                        itemBuilder: (context, shiftIndex) {
+                                          final shift =
+                                              groupedFortnightShifts[date]![shiftIndex];
+                                          return mShiftTile(
+                                            date: date,
+                                            shiftsForDate: [shift],
+                                            colorScheme: colorScheme,
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+              )
+            ],
+          ),
         );
       },
-    );
-  }
-
-  Widget _buildDateSection(
-      String date, List shiftsForDate, ColorScheme colorScheme) {
-    final weekday = DateFormat('EEEE').format(DateTime.parse(date));
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            '$weekday, ${DateFormat('d MMMM').format(DateTime.parse(date))}',
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: colorScheme.tertiary.withOpacity(0.7)),
-          ),
-        ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: shiftsForDate.length,
-          itemBuilder: (context, shiftIndex) {
-            final shift = shiftsForDate[shiftIndex];
-            return _buildShiftCard(shift, colorScheme);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShiftCard(Map<String, dynamic> shift, ColorScheme colorScheme) {
-    return GestureDetector(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Card(
-          color: colorScheme.secondaryContainer,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${shift['ClientFirstName']} ${shift['ClientLastName']}',
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontStyle: FontStyle.italic,
-                      color: colorScheme.secondary),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${shift['ServiceDescription']}',
-                  style: TextStyle(fontSize: 14, color: colorScheme.secondary),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
