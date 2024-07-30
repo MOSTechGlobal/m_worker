@@ -12,6 +12,7 @@ import 'package:m_worker/components/drawer.dart';
 import 'package:m_worker/components/shift_tile/listTile.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/weather/weather_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,9 +29,46 @@ class _HomePageState extends State<HomePage> {
   final Set<String> _selectedSegment = {'Today'};
   String? errorMessage;
   bool isLoading = true;
+  late bool showWeather = true;
 
-  Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
+  late dynamic workerID;
+
+  SharedPreferences? prefs;
+
+  Future<void> _signOut(colorScheme) async {
+    showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title:
+                Text('Sign Out', style: TextStyle(color: colorScheme.primary)),
+            content: Text('Are you sure you want to sign out?',
+                style: TextStyle(color: colorScheme.primary)),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pop(context);
+                },
+                child: Text('Sign Out',
+                    style: TextStyle(color: colorScheme.error)),
+              ),
+            ],
+          );
+        });
+  }
+
+  void _fetchPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      showWeather = prefs.getBool('showWeather') ?? true;
+    });
   }
 
   Future<void> _fetchWorkerShifts() async {
@@ -38,6 +76,8 @@ class _HomePageState extends State<HomePage> {
     try {
       final res = await Api.get('getWorkerMasterDataByEmail/$user');
       _worker = res['data'];
+      prefs = await SharedPreferences.getInstance();
+      prefs!.setString('workerID', _worker['WorkerID'].toString());
       final workerShifts =
           await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
@@ -73,6 +113,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     _fetchWorkerShifts();
+    _fetchPrefs();
     super.initState();
   }
 
@@ -126,12 +167,12 @@ class _HomePageState extends State<HomePage> {
                 color: colorScheme.primary,
                 size: 40,
               ),
-              drawerIconColor: colorScheme.primary,
+              drawerIconColor: colorScheme.onSurface,
             ),
             slider: mDrawer(
               userName: _worker['FirstName'] ?? 'Worker',
               colorScheme: colorScheme,
-              onSignOut: _signOut,
+              onSignOut: () => _signOut(colorScheme),
             ),
             child: Container(
               color: colorScheme.surface,
@@ -139,10 +180,12 @@ class _HomePageState extends State<HomePage> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  WeatherWidget(
-                    city: 'Sydney',
-                    userName: _worker['FirstName'] ?? 'Worker',
-                  ),
+                  if (showWeather)
+                    WeatherWidget(
+                      city: 'Sydney',
+                      userName: _worker['FirstName'] ?? 'Worker',
+                    ),
+                  const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Row(
@@ -159,7 +202,8 @@ class _HomePageState extends State<HomePage> {
                         SegmentedButton(
                           style: ButtonStyle(
                             visualDensity: VisualDensity.compact,
-                            padding: WidgetStateProperty.resolveWith<EdgeInsets>(
+                            padding:
+                                WidgetStateProperty.resolveWith<EdgeInsets>(
                               (Set<WidgetState> states) {
                                 if (states.contains(WidgetState.hovered)) {
                                   return const EdgeInsets.all(10);
@@ -177,7 +221,8 @@ class _HomePageState extends State<HomePage> {
                                 return colorScheme.secondary;
                               },
                             ),
-                            animationDuration: const Duration(milliseconds: 300),
+                            animationDuration:
+                                const Duration(milliseconds: 300),
                           ),
                           showSelectedIcon: false,
                           segments: const [
@@ -219,7 +264,8 @@ class _HomePageState extends State<HomePage> {
                         : errorMessage != null
                             ? Center(
                                 child: Text(errorMessage!,
-                                    style: TextStyle(color: colorScheme.primary)))
+                                    style:
+                                        TextStyle(color: colorScheme.primary)))
                             : RefreshIndicator(
                                 onRefresh: _fetchWorkerShifts,
                                 child: ListView.builder(
@@ -239,12 +285,16 @@ class _HomePageState extends State<HomePage> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            date,
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                color: colorScheme.secondary),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 18),
+                                            child: Text(
+                                              DateFormat('EE d MMMM')
+                                                  .format(DateTime.parse(date)),
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: colorScheme.secondary),
+                                            ),
                                           ),
                                           ListView.builder(
                                             shrinkWrap: true,

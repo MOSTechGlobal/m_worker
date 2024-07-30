@@ -40,22 +40,24 @@ class mShiftTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 10),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: shiftsForDate.length,
           itemBuilder: (context, shiftIndex) {
             final shift = shiftsForDate[shiftIndex];
-            return _buildShiftCard(shift, colorScheme);
+            return _buildShiftCard(context, shift, colorScheme);
           },
         ),
       ],
     );
   }
 
-  Widget _buildShiftCard(Map<String, dynamic> shift, ColorScheme colorScheme) {
+  Widget _buildShiftCard(context, Map<String, dynamic> shift, ColorScheme colorScheme) {
     return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/shift_details', arguments: shift);
+      },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Card(
@@ -103,7 +105,7 @@ class mShiftTile extends StatelessWidget {
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
 
-                                  '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
+                                  '${DateFormat('hh:mm aa').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('hh:mm aa').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
                                   style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
