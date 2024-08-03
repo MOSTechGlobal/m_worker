@@ -30,8 +30,6 @@ class _DocumentsState extends State<Documents> {
   late double _uploadState = 0.0;
   late bool _isLoading = false;
 
-  late String _doc;
-
   @override
   void initState() {
     _fetchData();
@@ -77,6 +75,7 @@ class _DocumentsState extends State<Documents> {
         workerDocs.clear();
         workerDocs.addAll(res['data']);
       });
+      log('Worker documents: $workerDocs');
     } catch (e) {
       log('Error fetching data: $e');
     } finally {
