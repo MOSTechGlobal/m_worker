@@ -75,7 +75,7 @@ class _LoginPageState extends State<LoginPage> {
       await prefs.setString('bearer', bearer!);
 
       const storage = FlutterSecureStorage();
-      await prefs.setString('company', _company);
+      await storage.write(key: 'company', value: _company);
       await storage.write(key: 'email', value: _email);
       await storage.write(key: 'password', value: _password);
 
