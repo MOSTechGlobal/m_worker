@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
+import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
 
@@ -222,6 +223,8 @@ class mDrawer extends StatelessWidget {
         return const Documents();
       case '/availability':
         return const Availability();
+      case '/id_card':
+        return const IdCard();
       case '/':
         return const HomePage(); // Replace with your actual widget for the home page
       default:
