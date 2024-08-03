@@ -41,7 +41,7 @@ class _HomePageState extends State<HomePage> {
         builder: (context) {
           return AlertDialog(
             title:
-                Text('Sign Out', style: TextStyle(color: colorScheme.primary)),
+            Text('Sign Out', style: TextStyle(color: colorScheme.primary)),
             content: Text('Are you sure you want to sign out?',
                 style: TextStyle(color: colorScheme.primary)),
             actions: [
@@ -79,7 +79,7 @@ class _HomePageState extends State<HomePage> {
       prefs = await SharedPreferences.getInstance();
       prefs!.setString('workerID', _worker['WorkerID'].toString());
       final workerShifts =
-          await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
+      await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
         try {
@@ -91,11 +91,10 @@ class _HomePageState extends State<HomePage> {
           log('Error inserting FCM token: $e');
         }
       }
-      if (_selectedSegment.contains('Today')) {
-        shifts = workerShifts['data'] ?? [];
-      } else {
-        shifts = workerShifts['data'] ?? [];
-      }
+      setState(() {
+        shifts = [];
+        shifts = workerShifts['data'];
+      });
       if (shifts.isEmpty) {
         setState(() {
           errorMessage = 'No shifts found';
@@ -136,7 +135,8 @@ class _HomePageState extends State<HomePage> {
     final fortnightShifts = shifts.where((shift) {
       final shiftStart = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
           .parse(shift['ShiftStart'], true);
-      return shiftStart.isAfter(today) &&
+      return !isSameDay(shiftStart, today) &&
+          shiftStart.isAfter(today) &&
           shiftStart.isBefore(today.add(const Duration(days: 14)));
     }).toList();
 
@@ -160,14 +160,17 @@ class _HomePageState extends State<HomePage> {
           body: SliderDrawer(
             key: const ValueKey('slider_drawer'),
             appBar: SliderAppBar(
-              isTitleCenter: true,
               appBarColor: colorScheme.surface,
-              title: ImageIcon(
-                const AssetImage('assets/images/logo.png'),
-                color: colorScheme.primary,
-                size: 40,
+              title: Center(
+                child: ImageIcon(
+                  const AssetImage('assets/images/logo.png'),
+                  color: colorScheme.primary,
+                  size: 40,
+                ),
               ),
-              drawerIconColor: colorScheme.onSurface,
+              appBarHeight: 70,
+              appBarPadding: const EdgeInsets.only(right: 12, top: 24),
+              drawerIconColor: colorScheme.secondary,
             ),
             slider: mDrawer(
               userName: _worker['FirstName'] ?? 'Worker',
@@ -185,7 +188,6 @@ class _HomePageState extends State<HomePage> {
                       city: 'Sydney',
                       userName: _worker['FirstName'] ?? 'Worker',
                     ),
-                  const SizedBox(height: 10),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Row(
@@ -203,8 +205,8 @@ class _HomePageState extends State<HomePage> {
                           style: ButtonStyle(
                             visualDensity: VisualDensity.compact,
                             padding:
-                                WidgetStateProperty.resolveWith<EdgeInsets>(
-                              (Set<WidgetState> states) {
+                            WidgetStateProperty.resolveWith<EdgeInsets>(
+                                  (Set<WidgetState> states) {
                                 if (states.contains(WidgetState.hovered)) {
                                   return const EdgeInsets.all(10);
                                 }
@@ -213,8 +215,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                             enableFeedback: true,
                             foregroundColor:
-                                WidgetStateProperty.resolveWith<Color>(
-                              (Set<WidgetState> states) {
+                            WidgetStateProperty.resolveWith<Color>(
+                                  (Set<WidgetState> states) {
                                 if (states.contains(WidgetState.disabled)) {
                                   return colorScheme.secondary;
                                 }
@@ -222,11 +224,14 @@ class _HomePageState extends State<HomePage> {
                               },
                             ),
                             animationDuration:
-                                const Duration(milliseconds: 300),
+                            const Duration(milliseconds: 300),
                           ),
                           showSelectedIcon: false,
                           segments: const [
-                            ButtonSegment(value: 'Today', label: Text('Today')),
+                            ButtonSegment(
+                                value: 'Today',
+                                label: Text('Today',
+                                    style: TextStyle(fontSize: 16))),
                             ButtonSegment(
                                 value: 'Fortnight', label: Text('Fortnight')),
                           ],
@@ -239,15 +244,14 @@ class _HomePageState extends State<HomePage> {
                                 _selectedSegment.clear();
                                 _selectedSegment.add('Today');
                               });
-                              _fetchWorkerShifts();
                             } else {
                               setState(() {
                                 _selectedSegment.clear();
                                 _selectedSegment.add('Fortnight');
                                 errorMessage = null;
                               });
-                              _fetchWorkerShifts();
                             }
+                            _fetchWorkerShifts();
                           },
                         ),
                       ],
@@ -256,70 +260,72 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: isLoading
                         ? const Center(
-                            child: SizedBox(
-                              width: 150,
-                              child: LinearProgressIndicator(),
-                            ),
-                          )
+                      child: SizedBox(
+                        width: 150,
+                        child: LinearProgressIndicator(),
+                      ),
+                    )
                         : errorMessage != null
-                            ? Center(
-                                child: Text(errorMessage!,
-                                    style:
-                                        TextStyle(color: colorScheme.primary)))
-                            : RefreshIndicator(
-                                onRefresh: _fetchWorkerShifts,
-                                child: ListView.builder(
-                                  itemCount: _selectedSegment.contains('Today')
-                                      ? todayShifts.length
-                                      : sortedFortnightDates.length,
-                                  itemBuilder: (context, index) {
-                                    if (_selectedSegment.contains('Today')) {
-                                      return mShiftTile(
-                                        date: 'Today',
-                                        shiftsForDate: todayShifts,
-                                        colorScheme: colorScheme,
-                                      );
-                                    } else {
-                                      final date = sortedFortnightDates[index];
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 18),
-                                            child: Text(
-                                              DateFormat('EE d MMMM')
-                                                  .format(DateTime.parse(date)),
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: colorScheme.secondary),
-                                            ),
-                                          ),
-                                          ListView.builder(
-                                            shrinkWrap: true,
-                                            physics:
-                                                const NeverScrollableScrollPhysics(),
-                                            itemCount:
-                                                groupedFortnightShifts[date]!
-                                                    .length,
-                                            itemBuilder: (context, shiftIndex) {
-                                              final shift =
-                                                  groupedFortnightShifts[date]![
-                                                      shiftIndex];
-                                              return mShiftTile(
-                                                date: date,
-                                                shiftsForDate: [shift],
-                                                colorScheme: colorScheme,
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      );
-                                    }
+                        ? Center(
+                        child: Text(errorMessage!,
+                            style:
+                            TextStyle(color: colorScheme.primary)))
+                        : RefreshIndicator(
+                      onRefresh: _fetchWorkerShifts,
+                      child: ListView.builder(
+                        itemCount: _selectedSegment.contains('Today')
+                            ? todayShifts.length
+                            : sortedFortnightDates.length,
+                        itemBuilder: (context, index) {
+                          if (_selectedSegment.contains('Today')) {
+                            return mShiftTile(
+                              key: ValueKey(todayShifts[index]['ShiftID']),
+                              date: 'Today',
+                              shiftsForDate: todayShifts[index],
+                              colorScheme: colorScheme,
+                            );
+                          } else {
+                            final date = sortedFortnightDates[index];
+                            return Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 18),
+                                  child: Text(
+                                    DateFormat('EE d MMMM')
+                                        .format(DateTime.parse(date)),
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: colorScheme.secondary),
+                                  ),
+                                ),
+                                ListView.builder(
+                                  shrinkWrap: true,
+                                  physics:
+                                  const NeverScrollableScrollPhysics(),
+                                  itemCount:
+                                  groupedFortnightShifts[date]!
+                                      .length,
+                                  itemBuilder: (context, shiftIndex) {
+                                    final shift =
+                                    groupedFortnightShifts[date]![
+                                    shiftIndex];
+                                    return mShiftTile(
+                                      key: ValueKey(shift['ShiftID']),
+                                      date: date,
+                                      shiftsForDate: shift,
+                                      colorScheme: colorScheme,
+                                    );
                                   },
                                 ),
-                              ),
+                              ],
+                            );
+                          }
+                        },
+                      ),
+                    ),
                   )
                 ],
               ),

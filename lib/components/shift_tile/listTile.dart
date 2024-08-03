@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 class mShiftTile extends StatelessWidget {
   final String date;
-  final List shiftsForDate;
+  final Map<String, dynamic> shiftsForDate;
   final ColorScheme colorScheme;
 
   const mShiftTile(
@@ -14,7 +14,8 @@ class mShiftTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _buildDateSection(date, shiftsForDate, colorScheme);
+
+    return _buildShiftCard(context, shiftsForDate, colorScheme);
   }
 
   String calculateShiftDuration(String shiftStart, String shiftEnd) {
@@ -33,24 +34,6 @@ class mShiftTile extends StatelessWidget {
     return hours > 0
         ? '$hours hr ${minutes > 0 ? '$minutes min' : ''}'
         : '$minutes min';
-  }
-
-  Widget _buildDateSection(
-      String date, List shiftsForDate, ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: shiftsForDate.length,
-          itemBuilder: (context, shiftIndex) {
-            final shift = shiftsForDate[shiftIndex];
-            return _buildShiftCard(context, shift, colorScheme);
-          },
-        ),
-      ],
-    );
   }
 
   Widget _buildShiftCard(context, Map<String, dynamic> shift, ColorScheme colorScheme) {

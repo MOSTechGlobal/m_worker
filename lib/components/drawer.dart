@@ -102,7 +102,7 @@ class mDrawer extends StatelessWidget {
             leading: const Icon(Icons.account_box),
             title: const Text('Id Card'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              _slideRoute(context, '/id_card');
             },
           ),
           Padding(

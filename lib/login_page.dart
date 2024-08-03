@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:m_worker/components/mTextField.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/utils/api.dart';
@@ -73,8 +74,10 @@ class _LoginPageState extends State<LoginPage> {
       String? bearer = await userCredential.user!.getIdToken();
       await prefs.setString('bearer', bearer!);
 
-      await prefs.setString('userEmail', _email);
-      await prefs.setString('userPassword', _password);
+      const storage = FlutterSecureStorage();
+      await prefs.setString('company', _company);
+      await storage.write(key: 'email', value: _email);
+      await storage.write(key: 'password', value: _password);
 
       errorMsg = 'Success';
 

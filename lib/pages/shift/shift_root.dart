@@ -16,29 +16,10 @@ class ShiftRoot extends StatefulWidget {
 }
 
 class _ShiftRootState extends State<ShiftRoot> {
-  final clientData = {};
   final shiftData = {};
 
   late int _selectedIndex = 0;
   final PageController _pageController = PageController();
-
-  void _fetchClientData() async {
-    try {
-      final response =
-          await Api.get('getClientGeneralProfileData/${shiftData['ClientID']}');
-      setState(() {
-        clientData.addAll(response['data'][0]);
-      });
-    } catch (e) {
-      log('Error fetching data: $e');
-    }
-  }
-
-  @override
-  void initState() {
-    _fetchClientData();
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,64 +36,70 @@ class _ShiftRootState extends State<ShiftRoot> {
           appBar: AppBar(
             title: const Text('Shift Details'),
           ),
-          bottomNavigationBar: NavigationBar(
-            animationDuration: const Duration(milliseconds: 300),
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              if (index == 5) {
-                _showMoreOptions(context, colorScheme);
-              } else {
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
-                );
-              }
-            },
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.info_outlined),
-                label: 'Details',
-                selectedIcon: Icon(Icons.info),
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.warning_amber),
-                label: 'Incident',
-                selectedIcon: Icon(Icons.warning),
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.note_outlined),
-                label: 'Notes',
-                selectedIcon: Icon(Icons.note),
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_pin_outlined),
-                label: 'Profile',
-                selectedIcon: Icon(Icons.person_pin),
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.upload_file),
-                label: 'Add Note/Photo',
-                selectedIcon: Icon(Icons.upload_file_rounded),
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.more_outlined),
-                label: 'More',
-                selectedIcon: Icon(Icons.more),
-              ),
-            ],
+          bottomNavigationBar: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: NavigationBar(
+              animationDuration: const Duration(milliseconds: 300),
+              selectedIndex: _selectedIndex,
+              onDestinationSelected: (index) {
+                if (index < 5) {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                } else if (index == 5) {
+                  _showMoreOptions(context, colorScheme);
+                }
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.info_outlined),
+                  label: 'Details',
+                  selectedIcon: Icon(Icons.info),
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.warning_amber),
+                  label: 'Incident',
+                  selectedIcon: Icon(Icons.warning),
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.note_outlined),
+                  label: 'Notes',
+                  selectedIcon: Icon(Icons.note),
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_pin_outlined),
+                  label: 'Profile',
+                  selectedIcon: Icon(Icons.person_pin),
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.upload_file),
+                  label: 'Add Note/Photo',
+                  selectedIcon: Icon(Icons.upload_file_rounded),
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.more_outlined),
+                  label: 'More',
+                  selectedIcon: Icon(Icons.more),
+                ),
+              ],
+            ),
           ),
           body: PageView(
             controller: _pageController,
             onPageChanged: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
+              if (index < 5) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              } else if (index == 5) {
+                _showMoreOptions(context, colorScheme);
+              }
             },
             children: [
               ShiftDetails(
                 shift: shiftData,
-                clientData: clientData,
               ),
               Center(
                   child: Text('Incident',
@@ -126,7 +113,6 @@ class _ShiftRootState extends State<ShiftRoot> {
               Center(
                   child: Text('Add Note/Photo',
                       style: TextStyle(fontSize: 30, color: colorScheme.primary))),
-              const Center(child: SizedBox.shrink()),
             ],
           ),
         );

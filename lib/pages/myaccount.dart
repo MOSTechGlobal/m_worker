@@ -104,8 +104,8 @@ class _MyAccountState extends State<MyAccount> {
     try {
       final s3Storage = S3Storage(
         endPoint: 's3.ap-southeast-2.amazonaws.com',
-        accessKey: dotenv.env['accessKey']!,
-        secretKey: dotenv.env['secretKey']!,
+        accessKey: dotenv.env['S3_ACCESS_KEY']!,
+        secretKey: dotenv.env['S3_SECRET_KEY']!,
         region: 'ap-southeast-2',
       );
 
@@ -134,8 +134,8 @@ class _MyAccountState extends State<MyAccount> {
     try {
       final s3Storage = S3Storage(
         endPoint: 's3.ap-southeast-2.amazonaws.com',
-        accessKey: dotenv.env['accessKey']!,
-        secretKey: dotenv.env['secretKey']!,
+        accessKey: dotenv.env['S3_ACCESS_KEY']!,
+        secretKey: dotenv.env['S3_SECRET_KEY']!,
         region: 'ap-southeast-2',
       );
 

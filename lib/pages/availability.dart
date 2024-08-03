@@ -54,7 +54,8 @@ class _AvailabilityState extends State<Availability> {
             child: Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.max,
                 children: [
                   Text(
                     day,
@@ -82,7 +83,7 @@ class _AvailabilityState extends State<Availability> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -139,7 +140,7 @@ class _AvailabilityState extends State<Availability> {
           child: Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.max,
               children: [
                 _buildAvailabilitySection('Current Availability', currentAvailability, currentStatus, colorScheme),

@@ -3,8 +3,10 @@ import 'dart:developer';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
+import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/shift/shift_root.dart';
@@ -27,6 +29,7 @@ void main() async {
     badge: true,
     sound: true,
   );
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
@@ -52,6 +55,7 @@ class MyApp extends StatelessWidget {
               '/training_qualification': (context) => const TrainingQualification(),
               '/documents': (context) => const Documents(),
               '/availability': (context) => const Availability(),
+              '/id_card': (context) => const IdCard(),
             },
             debugShowCheckedModeBanner: false,
             theme: lightTheme,

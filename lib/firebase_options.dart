@@ -27,17 +27,17 @@ class DefaultFirebaseOptions {
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
+              'you can reconfigure this by running the FlutterFire CLI again.',
         );
       default:
         throw UnsupportedError(
@@ -57,7 +57,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBB2-ZQlFvQSFv37wfg-wvWK-mZe9fWiu0',
-    appId: '1:754277003448:android:27d0e5efee2e269e31044d',
+    appId: '1:754277003448:android:e02f4242fd2b620031044d',
     messagingSenderId: '754277003448',
     projectId: 'moscare-dev',
     storageBucket: 'moscare-dev.appspot.com',
@@ -65,11 +65,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBsxtACk_vbVxxcL2MTMV95hrth-yqUc1s',
-    appId: '1:754277003448:ios:2669aa6b5060952e31044d',
+    appId: '1:754277003448:ios:502f02ba68cb3e7f31044d',
     messagingSenderId: '754277003448',
     projectId: 'moscare-dev',
     storageBucket: 'moscare-dev.appspot.com',
-    iosBundleId: 'com.lamaq.aqMoscare',
+    iosBundleId: 'com.mostech.global.mWorker',
   );
 
 }

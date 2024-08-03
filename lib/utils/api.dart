@@ -1,19 +1,21 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
-  static const String baseUrl = 'http://192.168.0.110:5000'; //https://moscare-api-master.vercel.app
+  static const String baseUrl = 'http://192.168.0.110:5000'; ////https://moscare-api-master.vercel.app
 
   static Future<String?> _refreshToken() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('userEmail');
-      final password = prefs.getString('userPassword');
+      const secureStorage = FlutterSecureStorage();
+      final email = await secureStorage.read(key: 'email');
+      final password = await secureStorage.read(key: 'password');
       final credentials = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email!, password: password!);
       String? bearer = await credentials.user!.getIdToken();
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setString('bearer', bearer!);
     } catch (e) {
       log('Error refreshing token: $e');
