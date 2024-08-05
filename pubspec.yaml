@@ -60,7 +60,6 @@ dependencies:
   permission_handler: ^11.3.1
   s3_storage: ^1.0.4
   image_picker: ^1.1.2
-  flutter_file_view: ^2.2.1
   flutter_dotenv: ^5.1.0
 
 dev_dependencies:

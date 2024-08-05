@@ -327,7 +327,7 @@ class _MyAccountState extends State<MyAccount> {
                     ],
                   ),
                   _image != null
-                      ? Image.file(File(_image!.path), width: 150, height: 150)
+                      ? Image.file(File(_image!.path), width: 100, height: 100, scale: 0.5,)
                       : const SizedBox.shrink(),
                   const SizedBox(height: 20),
                   Text(

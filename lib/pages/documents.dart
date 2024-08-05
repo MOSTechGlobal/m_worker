@@ -1,18 +1,16 @@
 import 'dart:developer';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_file_view/flutter_file_view.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:s3_storage/io.dart';
 import 'package:s3_storage/s3_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../bloc/theme_bloc.dart';
 
@@ -35,7 +33,6 @@ class _DocumentsState extends State<Documents> {
     _fetchData();
     _fetchDocumentCategories();
     askForPermission();
-    FlutterFileView.init();
     super.initState();
   }
 
@@ -156,8 +153,7 @@ class _DocumentsState extends State<Documents> {
 
 
 
-  Future _downloadDoc(bucket, folder, file) async {
-    // TODO: Implement download functionality and View the document
+  void _downloadDoc(bucket, folder, file) async {
     try {
       final s3Storage = S3Storage(
         endPoint: 's3.ap-southeast-2.amazonaws.com',
@@ -166,33 +162,15 @@ class _DocumentsState extends State<Documents> {
         region: 'ap-southeast-2',
       );
 
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
-
-      // Get the signed URL for the image
-      final String signedUrl = await s3Storage.presignedGetObject(
-        'moscaresolutions',
-        '$company/worker/$email/$folder/$file'
+      final signedUrl = await s3Storage.presignedGetObject(
+        bucket,
+        '$folder/$file'
       );
-
       log('Signed URL: $signedUrl');
-
-      _showDocumentViewer(signedUrl);
+      launch(signedUrl);
     } catch (e) {
       log('Error getting profile picture: $e');
     }
-  }
-
-  void _showDocumentViewer(String signedUrl) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return FileView(
-          controller: FileViewController.network(signedUrl),
-        );
-      },
-    );
   }
 
   @override
@@ -240,6 +218,7 @@ class _DocumentsState extends State<Documents> {
                               ),
                             )
                           : _buildDocuments(colorScheme),
+
                 ],
               ),
             ),
@@ -285,6 +264,7 @@ class _DocumentsState extends State<Documents> {
             trailing: IconButton(
               icon: const Icon(Icons.download),
               onPressed: () {
+                log('${doc['Bucket']}, ${doc['Folder']}, ${doc['File']}');
                 _downloadDoc(doc['Bucket'], doc['Folder'], doc['File']);
               },
             ),

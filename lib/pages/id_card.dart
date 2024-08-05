@@ -167,7 +167,7 @@ class _IdCardState extends State<IdCard> {
                       ),
                       const SizedBox(height: 20),
                       Image.network(
-                        'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${workerData['WorkerID']}&color=${_companyColors['primary'] != null ? _companyColors['primary']!.value.toRadixString(16).substring(2) : '000000'}&bgcolor=${_companyColors['light'] != null ? _companyColors['light']!.value.toRadixString(16).substring(2) : 'FFFFFF'}&qzone=1&margin=0&format=png',
+                        'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=wk${workerData['WorkerID']}&color=${_companyColors['primary'] != null ? _companyColors['primary']!.value.toRadixString(16).substring(2) : '000000'}&bgcolor=${_companyColors['light'] != null ? _companyColors['light']!.value.toRadixString(16).substring(2) : 'FFFFFF'}&qzone=1&margin=0&format=png',
                         width: 150,
                         height: 150,
                       ),
