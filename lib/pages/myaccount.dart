@@ -51,8 +51,10 @@ class _MyAccountState extends State<MyAccount> {
 
   void _fetchPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    const secureStorage = FlutterSecureStorage();
+    String? company = await secureStorage.read(key: 'company');
     setState(() {
-      _companyName = prefs.getString('company') ?? '';
+      _companyName = company ?? '';
       showWeather = prefs.getBool('showWeather') ?? true;
       biometricsEnabled = prefs.getBool('biometricsEnabled') ?? false;
     });
@@ -72,12 +74,27 @@ class _MyAccountState extends State<MyAccount> {
       final availableBiometrics = await _auth.getAvailableBiometrics();
       if (availableBiometrics.isEmpty) {
         log('Biometric authentication not available.');
+        setState(() {
+          biometricsEnabled = false;
+        });
+        // show snackbar to show error
+        const snackBar = SnackBar(
+          content: Text('Biometric authentication not available.'),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
         return;
       }
       log('Available biometrics: $availableBiometrics');
       final canCheckBiometrics = await _auth.canCheckBiometrics;
       if (!canCheckBiometrics) {
         log('Biometric authentication not available.');
+        setState(() {
+          biometricsEnabled = false;
+        });
+        const snackBar = SnackBar(
+          content: Text('Biometric authentication not available.'),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
         return;
       }
       final isAuthenticated = await _auth.authenticate(
@@ -89,18 +106,23 @@ class _MyAccountState extends State<MyAccount> {
       );
       if (isAuthenticated) {
         final prefs = await SharedPreferences.getInstance();
+        setState(() {
+          biometricsEnabled = true;
+        });
         prefs.setBool('biometricsEnabled', biometricsEnabled);
         log('Authenticated');
       } else {
         log('Not authenticated');
+        setState(() {
+          biometricsEnabled = false;
+        });
       }
     } catch (e) {
       log('Error authenticating: $e');
     }
   }
 
-  void _uploadDoc(image) async {
-
+  void _uploadPFP(image) async {
     try {
       final s3Storage = S3Storage(
         endPoint: 's3.ap-southeast-2.amazonaws.com',
@@ -113,10 +135,11 @@ class _MyAccountState extends State<MyAccount> {
       final company = await storage.read(key: 'company');
       final email = await storage.read(key: 'email');
 
+      final extension = image.path.split('.').last;
       await s3Storage.putObject(
         'moscaresolutions',
-        '$company/worker/$email/profile_picture/pfp.${image.path.split('/').last.toString().split('.').last.toString()}',
-          Stream<Uint8List>.value(Uint8List.fromList(image.readAsBytesSync())),
+        '$company/worker/$email/profile_picture/pfp.$extension',
+        Stream<Uint8List>.value(Uint8List.fromList(image.readAsBytesSync())),
         onProgress: (progress) {
           log('Progress: $progress');
         },
@@ -142,11 +165,11 @@ class _MyAccountState extends State<MyAccount> {
       const storage = FlutterSecureStorage();
       final company = await storage.read(key: 'company');
       final email = await storage.read(key: 'email');
-
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
         '$company/worker/$email/profile_picture/pfp.jpg',
       );
+
       log('URL: $url');
 
       setState(() {
@@ -186,6 +209,13 @@ class _MyAccountState extends State<MyAccount> {
                         width: 100,
                         height: 100,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.person_outlined,
+                            size: 50,
+                            color: colorScheme.primary,
+                          );
+                        },
                       )
                           : Icon(
                         Icons.person,
@@ -296,7 +326,7 @@ class _MyAccountState extends State<MyAccount> {
   }
 
   void _showPfpDialog(ColorScheme colorScheme, BuildContext context) {
-    XFile? _image;
+    XFile? image0;
 
     showModalBottomSheet(
       context: context,
@@ -321,13 +351,13 @@ class _MyAccountState extends State<MyAccount> {
                       IconButton(
                         icon: Icon(Icons.check, color: colorScheme.primary),
                         onPressed: () async {
-                          _uploadDoc(File(_image!.path));
+                          _uploadPFP(File(image0!.path));
                         },
                       ),
                     ],
                   ),
-                  _image != null
-                      ? Image.file(File(_image!.path), width: 100, height: 100, scale: 0.5,)
+                  image0 != null
+                      ? Image.file(File(image0!.path), width: 100, height: 100, scale: 0.5,)
                       : const SizedBox.shrink(),
                   const SizedBox(height: 20),
                   Text(
@@ -341,11 +371,11 @@ class _MyAccountState extends State<MyAccount> {
                   MButton(
                     label: 'Take a photo',
                     onPressed: () async {
-                      final ImagePicker _picker = ImagePicker();
-                      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(source: ImageSource.camera);
                       if (image != null) {
                         setState(() {
-                          _image = image;
+                          image0 = image;
                         });
                       }
                     },
@@ -355,11 +385,11 @@ class _MyAccountState extends State<MyAccount> {
                   MButton(
                     label: 'Choose from gallery',
                     onPressed: () async {
-                      final ImagePicker _picker = ImagePicker();
-                      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+                      final ImagePicker picker = ImagePicker();
+                      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
                       if (image != null) {
                         setState(() {
-                          _image = image;
+                          image0 = image;
                         });
                       }
                     },

@@ -5,6 +5,7 @@ import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
+import 'package:m_worker/pages/timesheets.dart';
 
 class mDrawer extends StatelessWidget {
   final String userName;
@@ -73,9 +74,9 @@ class mDrawer extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.access_time_rounded),
-            title: const Text('TimeSheets'),
+            title: const Text('Timesheets'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              _slideRoute(context, '/timesheets');
             },
           ),
           ListTile(
@@ -225,6 +226,8 @@ class mDrawer extends StatelessWidget {
         return const Availability();
       case '/id_card':
         return const IdCard();
+      case '/timesheets':
+        return const Timesheets();
       case '/':
         return const HomePage(); // Replace with your actual widget for the home page
       default:

@@ -106,6 +106,16 @@ class _IdCardState extends State<IdCard> {
         title: Text('ID Card',
             style: TextStyle(color: _companyColors['light'] ?? Colors.black)),
         backgroundColor: _companyColors['primary'] ?? Colors.grey.shade200,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              _fetchData();
+              _getPfp();
+              _fetchCompanyColors();
+            },
+          ),
+        ],
       ),
       backgroundColor: _companyColors['light'] ?? Colors.grey.shade200,
       body: workerData.isEmpty
@@ -127,10 +137,13 @@ class _IdCardState extends State<IdCard> {
                       ),
                       const SizedBox(height: 20),
                       if (_pfp != null)
-                        Image.network(
-                          _pfp!,
-                          width: 200,
-                          height: 200,
+                        FadeInImage.assetNetwork(
+                          placeholder: 'assets/images/id_card_pfp_placeholder.png',
+                          image: _pfp!,
+                          width: 150,
+                          height: 150,
+                          fit: BoxFit.cover,
+                          fadeInDuration: const Duration(milliseconds: 500),
                         ),
                       const SizedBox(height: 20),
                       Text(

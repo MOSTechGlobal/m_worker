@@ -10,6 +10,7 @@ import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/shift/shift_root.dart';
+import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
 import 'auth/auth.dart';
 import 'bloc/theme_bloc.dart';
@@ -56,6 +57,7 @@ class MyApp extends StatelessWidget {
               '/documents': (context) => const Documents(),
               '/availability': (context) => const Availability(),
               '/id_card': (context) => const IdCard(),
+              '/timesheets': (context) => const Timesheets(),
             },
             debugShowCheckedModeBanner: false,
             theme: lightTheme,
