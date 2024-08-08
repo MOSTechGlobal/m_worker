@@ -5,8 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/utils/api.dart';
 
-import '../../bloc/theme_bloc.dart';
-import '../../components/shift_detail/shift_detail_3rd_card.dart';
+import '../../../bloc/theme_bloc.dart';
+import '../../../components/shift_detail/shift_detail_3rd_card.dart';
 
 class ShiftDetails extends StatefulWidget {
   final Map<dynamic, dynamic> shift;
@@ -232,8 +232,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 ),
                                 Text(
                                   DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftStart'])
-                                          .toLocal()),
+                                      DateTime.parse(shift['ShiftStart']).toUtc()),
                                   style: TextStyle(
                                       color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
@@ -249,8 +248,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 ),
                                 Text(
                                   DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftEnd'])
-                                          .toLocal()),
+                                      DateTime.parse(shift['ShiftEnd']).toUtc()),
                                   style: TextStyle(
                                       color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
                                 ),

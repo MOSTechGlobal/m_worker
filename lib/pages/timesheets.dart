@@ -18,6 +18,8 @@ class Timesheets extends StatefulWidget {
 class _TimesheetsState extends State<Timesheets> {
   DateTime selectedDate = DateTime.now();
 
+  bool _isLoading = false;
+
   // Example shifts data
   List<Map<String, dynamic>> shifts = [];
 
@@ -25,14 +27,25 @@ class _TimesheetsState extends State<Timesheets> {
   final Map<int, TextEditingController> _controllers = {};
 
   Future<void> _fetchShifts() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final workerID = prefs.getString('workerID');
-    final res = await Api.get('getShiftMainDataByWorkerID/$workerID');
-    log('res: $res');
-    if (res['success']) {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final workerID = prefs.getString('workerID');
+      final res = await Api.get('getShiftMainDataByWorkerID/$workerID');
+      log('res: $res');
+      if (res['success']) {
+        setState(() {
+          shifts = List<Map<String, dynamic>>.from(res['data']);
+          _initializeControllers();
+        });
+      }
+    } catch (e) {
+      log('Error fetching shifts: $e');
+    } finally {
       setState(() {
-        shifts = List<Map<String, dynamic>>.from(res['data']);
-        _initializeControllers();
+        _isLoading = false;
       });
     }
   }
@@ -202,80 +215,88 @@ class _TimesheetsState extends State<Timesheets> {
                           height: MediaQuery.of(context).size.height * 0.3,
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
-                            child: ListView.builder(
+                            child: _isLoading ?
+                                const Center(child: CircularProgressIndicator()) :
+                            ListView.builder(
                               itemCount: filteredShifts.length,
                               itemBuilder: (context, index) {
                                 final shift = filteredShifts[index];
                                 final shiftIndex = shifts.indexOf(shift);
-                                return Card(
-                                  color: colorScheme.tertiaryContainer,
-                                  margin: const EdgeInsets.all(8),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: <Widget>[
-                                        Expanded(
-                                          flex: 2,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: <Widget>[
-                                              Text(
-                                                textAlign: TextAlign.left,
-                                                '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']))} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']))}',
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    color: colorScheme.primary),
-                                              ),
-                                              Text(
-                                                textAlign: TextAlign.left,
-                                                '${shift['ClientFirstName']} ${shift['ClientLastName']}',
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    color: colorScheme.primary),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 1,
-                                          child: Card(
-                                            elevation: 0,
-                                            child: TextField(
-                                              controller: _controllers[shiftIndex],
-                                              onChanged: (value) {
-                                                _onHoursChanged(value, shiftIndex);
-                                                setState(() {
-                                                  _controllers[shiftIndex]?.text = value;
-                                                });
-                                              },
-                                              keyboardType: TextInputType.number,
-                                              decoration: InputDecoration(
-                                                hintText: 'Hours',
-                                                hintStyle: TextStyle(
-                                                    color: colorScheme.primary),
-                                                border: const UnderlineInputBorder(
-                                                  borderSide: BorderSide.none,
+                                return GestureDetector(
+                                  onTap: () {
+                                    log('shift: $shift' );
+                                    Navigator.pushNamed(context, '/shift_details', arguments: shift);
+                                  },
+                                  child: Card(
+                                    color: colorScheme.tertiaryContainer,
+                                    margin: const EdgeInsets.all(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: <Widget>[
+                                          Expanded(
+                                            flex: 2,
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: <Widget>[
+                                                Text(
+                                                  textAlign: TextAlign.left,
+                                                  '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']))} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']))}',
+                                                  style: TextStyle(
+                                                      fontSize: 16,
+                                                      color: colorScheme.primary),
                                                 ),
+                                                Text(
+                                                  textAlign: TextAlign.left,
+                                                  '${shift['ClientFirstName']} ${shift['ClientLastName']}',
+                                                  style: TextStyle(
+                                                      fontSize: 16,
+                                                      color: colorScheme.primary),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Card(
+                                              elevation: 0,
+                                              child: TextField(
+                                                controller: _controllers[shiftIndex],
+                                                onChanged: (value) {
+                                                  _onHoursChanged(value, shiftIndex);
+                                                  setState(() {
+                                                    _controllers[shiftIndex]?.text = value;
+                                                  });
+                                                },
+                                                keyboardType: TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  hintText: 'Hours',
+                                                  hintStyle: TextStyle(
+                                                      color: colorScheme.primary),
+                                                  border: const UnderlineInputBorder(
+                                                    borderSide: BorderSide.none,
+                                                  ),
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: colorScheme.primary),
                                               ),
-                                              textAlign: TextAlign.center,
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              textAlign: TextAlign.right,
+                                              '\$${(shift['PayRate'] ?? 0).toStringAsFixed(2)} /hr',
                                               style: TextStyle(
                                                   fontSize: 16,
                                                   color: colorScheme.primary),
                                             ),
                                           ),
-                                        ),
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(
-                                            textAlign: TextAlign.right,
-                                            '\$${(shift['PayRate'] ?? 0).toStringAsFixed(2)} /hr',
-                                            style: TextStyle(
-                                                fontSize: 16,
-                                                color: colorScheme.primary),
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
