@@ -165,6 +165,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     setState(() {
                       _currentDate = DateTime.now();
                     });
+                    widget.onDateSelected(DateTime.now());
                   },
                   style: TextButton.styleFrom(
                       backgroundColor: widget.colorScheme.tertiaryContainer),
