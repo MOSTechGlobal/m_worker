@@ -1,193 +1,188 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_calendar_week/flutter_calendar_week.dart';
 import 'package:intl/intl.dart';
-import 'package:m_worker/bloc/theme_bloc.dart';
 
-class WeeklyCalenderView extends StatefulWidget {
+class WeeklyCalendarView extends StatefulWidget {
   final void Function(DateTime selectedDate) onDateSelected;
+  final ColorScheme colorScheme;
 
-  const WeeklyCalenderView({super.key, required this.onDateSelected});
+  const WeeklyCalendarView(
+      {Key? key, required this.onDateSelected, required this.colorScheme})
+      : super(key: key);
 
   @override
-  _WeeklyCalenderViewState createState() => _WeeklyCalenderViewState();
+  _WeeklyCalendarViewState createState() => _WeeklyCalendarViewState();
 }
 
-class _WeeklyCalenderViewState extends State<WeeklyCalenderView> {
-  late CalendarWeekController weekController;
+class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
+  late DateTime _currentDate;
+  late DateTime _minDate;
+  late DateTime _maxDate;
 
   @override
   void initState() {
     super.initState();
-    weekController = CalendarWeekController();
+    _currentDate = DateTime.now();
+    _minDate = DateTime.now().subtract(const Duration(days: 365));
+    _maxDate = DateTime.now().add(const Duration(days: 365));
   }
 
   void _updateSelectedDate(DateTime date) {
+    setState(() {
+      _currentDate = date;
+    });
     widget.onDateSelected(date);
+  }
+
+  DateTime _getWeekStart(DateTime date) {
+    final weekday = date.weekday;
+    final daysToSubtract = (weekday - DateTime.monday + 7) % 7;
+    return date.subtract(Duration(days: daysToSubtract));
+  }
+
+  List<Widget> _buildWeekDays(DateTime weekStart) {
+    final weekDays = <Widget>[];
+    for (int i = 0; i < 7; i++) {
+      final day = weekStart.add(Duration(days: i));
+      final isToday = day.day == DateTime.now().day &&
+          day.month == DateTime.now().month &&
+          day.year == DateTime.now().year;
+      weekDays.add(
+        Expanded(
+          child: GestureDetector(
+            onTap: () => _updateSelectedDate(day),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: day.day == _currentDate.day &&
+                    day.month == _currentDate.month &&
+                    day.year == _currentDate.year
+                    ? widget.colorScheme.primaryContainer
+                    : day.day == DateTime.now().day &&
+                    day.month == DateTime.now().month &&
+                    day.year == DateTime.now().year
+                    ? widget.colorScheme.tertiaryContainer.withOpacity(0.5)
+                    : null,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    DateFormat.E().format(day),
+                    style: TextStyle(color: widget.colorScheme.primary),
+                  ),
+                  Text(
+                    day.day.toString(),
+                    style: TextStyle(
+                      color: widget.colorScheme.primary,
+                      fontWeight: day.day == _currentDate.day &&
+                          day.month == _currentDate.month &&
+                          day.year == _currentDate.year
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  if (isToday)
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: widget.colorScheme.tertiary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return weekDays;
+  }
+
+  void _navigateToWeek(DateTime newDate) {
+    final newWeekStart = _getWeekStart(newDate);
+    final oldWeekStart = _getWeekStart(_currentDate);
+    var newSelectedDate = _currentDate.add(newDate.difference(oldWeekStart));
+
+    if (newSelectedDate.isBefore(_minDate)) {
+      newSelectedDate = _minDate;
+    }
+    if (newSelectedDate.isAfter(_maxDate)) {
+      newSelectedDate = _maxDate;
+    }
+
+    setState(() {
+      _currentDate = newSelectedDate;
+    });
+
+    widget.onDateSelected(newSelectedDate);
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ThemeBloc, ThemeMode>(
-      builder: (context, state) {
-        final colorScheme = Theme
-            .of(context)
-            .colorScheme;
+    final weekStart = _getWeekStart(_currentDate);
+    final prevWeek = weekStart.subtract(const Duration(days: 7));
+    final nextWeek = weekStart.add(const Duration(days: 7));
 
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Card(
+      color: widget.colorScheme.secondaryContainer.withOpacity(0.8),
+      borderOnForeground: true,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: widget.colorScheme.primary)),
+      margin: const EdgeInsets.all(8),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
           children: [
-            Card(
-              color: colorScheme.primaryContainer.withOpacity(0.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: colorScheme.primaryContainer.withOpacity(0.9),
-                  width: 1,
-                ),
-              ),
-              borderOnForeground: true,
-              child: CalendarWeek(
-                decorations: [
-                  DecorationItem(
-                    decorationAlignment: FractionalOffset.bottomCenter,
-                    date: DateTime.now(),
-                    decoration: Icon(
-                      Icons.circle,
-                      size: 6,
-                      color: colorScheme.primary,
-                    ),
-                  ),
-                ],
-                dayOfWeek: const [
-                  'Mon',
-                  'Tue',
-                  'Wed',
-                  'Thu',
-                  'Fri',
-                  'Sat',
-                  'Sun'
-                ],
-                backgroundColor: Colors.transparent,
-                dayOfWeekStyle: _buildTextStyle(colorScheme.primary),
-                todayDateStyle: _buildTextStyle(colorScheme.primary),
-                controller: weekController,
-                height: 120,
-                showMonth: true,
-                minDate: DateTime.now().subtract(const Duration(days: 365)),
-                maxDate: DateTime.now().add(const Duration(days: 365)),
-                onDatePressed: (DateTime datetime) {
-                  _updateSelectedDate(datetime);
-                },
-                onDateLongPressed: (DateTime datetime) {
-                  _updateSelectedDate(datetime);
-                },
-                onWeekChanged: () {
-                  _updateSelectedDate(
-                      getWeekStart(weekController.selectedDate));
-                },
-                dateStyle: _buildTextStyle(colorScheme.tertiary),
-                weekendsStyle: _buildTextStyle(colorScheme.tertiary),
-                weekendsIndexes: const [],
-                monthViewBuilder: (DateTime time) =>
-                    Align(
-                      alignment: FractionalOffset.center,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          DateFormat.yMMMM().format(time),
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: colorScheme.secondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                dateBackgroundColor: Colors.transparent,
-                todayBackgroundColor: colorScheme.primary.withOpacity(0.2),
-                pressedDateBackgroundColor: colorScheme.primary.withOpacity(
-                    0.4),
-              ),
+            Text(
+              DateFormat.yMMMM().format(weekStart),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: widget.colorScheme.primary),
             ),
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        final today = DateTime.now();
-                        weekController.jumpToDate(today);
-                        _updateSelectedDate(today);
-                      });
-                    },
-                    style: TextButton.styleFrom(
-                      backgroundColor: colorScheme.tertiaryContainer.withOpacity(0.2),
-                      fixedSize: const Size(80, 30),
-                    ),
-                    child: Text(
-                      'Today',
-                      style: TextStyle(
-                        color: colorScheme.secondary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                            Icons.arrow_back_ios, color: colorScheme.secondary),
-                        onPressed: () {
-                          setState(() {
-                            final prevWeek = weekController.selectedDate.subtract(
-                                const Duration(days: 7));
-                            weekController.jumpToDate(prevWeek);
-                            _updateSelectedDate(getWeekStart(prevWeek));
-                          });
-                        },
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(Icons.arrow_forward_ios,
-                            color: colorScheme.secondary),
-                        onPressed: () {
-                          setState(() {
-                            final nextWeek = weekController.selectedDate.add(
-                                const Duration(days: 7));
-                            weekController.jumpToDate(nextWeek);
-                            _updateSelectedDate(getWeekStart(nextWeek));
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            const SizedBox(height: 8),
+            Row(
+              children: _buildWeekDays(weekStart),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back_ios,
+                      color: widget.colorScheme.primary),
+                  onPressed: () {
+                    _navigateToWeek(prevWeek);
+                  },
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _currentDate = DateTime.now();
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                      backgroundColor: widget.colorScheme.tertiaryContainer),
+                  child: Text('Today',
+                      style: TextStyle(color: widget.colorScheme.tertiary)),
+                ),
+                IconButton(
+                  icon: Icon(Icons.arrow_forward_ios,
+                      color: widget.colorScheme.primary),
+                  onPressed: () {
+                    _navigateToWeek(nextWeek);
+                  },
+                ),
+              ],
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
-  }
-
-  TextStyle _buildTextStyle(Color color) {
-    return TextStyle(
-      color: color,
-      fontWeight: FontWeight.w800,
-    );
-  }
-
-  // Calculate the start of the week (Monday)
-  DateTime getWeekStart(DateTime date) {
-    final weekday = date.weekday;
-    final daysToSubtract = (weekday - DateTime.monday + 7) % 7;
-    return date.subtract(Duration(days: daysToSubtract));
   }
 }
