@@ -98,11 +98,10 @@ class _DocumentsState extends State<Documents> {
 
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
-      final email = prefs.getString('email');
-
+      final workerID = prefs.getString('workerID');
       await s3Storage.putObject(
         'moscaresolutions',
-        '$company/worker/$email/${documentDetails['DocCategory']}_${documentDetails['DocName']}/${File(documentDetails['DocFile']).path.split('/').last}',
+        '$company/worker/$workerID/documents/${documentDetails['DocCategory']}_${documentDetails['DocName']}/${File(documentDetails['DocFile']).path.split('/').last}',
         Stream<Uint8List>.value(Uint8List.fromList(
             await File(documentDetails['DocFile']).readAsBytes())),
         onProgress: (bytes) => setState(() {
@@ -138,7 +137,7 @@ class _DocumentsState extends State<Documents> {
         // s3://moscaresolutions/teuila/worker/abdulqadir@mostech.solutions/1_test2 document name/
         'Bucket': 'moscaresolutions',
         'Folder':
-            '$company/worker/$email/${documentDetails['DocCategory']}_${documentDetails['DocName']}',
+            '$company/worker/$workerID/documents/${documentDetails['DocCategory']}_${documentDetails['DocName']}',
         'File': File(documentDetails['DocFile']).path.split('/').last,
         'CreatedBy': email,
       });
@@ -150,8 +149,6 @@ class _DocumentsState extends State<Documents> {
     }
   }
 
-
-
   void _downloadDoc(bucket, folder, file) async {
     try {
       final s3Storage = S3Storage(
@@ -161,10 +158,8 @@ class _DocumentsState extends State<Documents> {
         region: 'ap-southeast-2',
       );
 
-      final signedUrl = await s3Storage.presignedGetObject(
-        bucket,
-        '$folder/$file'
-      );
+      final signedUrl =
+          await s3Storage.presignedGetObject(bucket, '$folder/$file');
       log('Signed URL: $signedUrl');
       launch(signedUrl);
     } catch (e) {
@@ -217,7 +212,6 @@ class _DocumentsState extends State<Documents> {
                               ),
                             )
                           : _buildDocuments(colorScheme),
-
                 ],
               ),
             ),

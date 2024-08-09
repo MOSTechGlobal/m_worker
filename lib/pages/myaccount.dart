@@ -132,12 +132,12 @@ class _MyAccountState extends State<MyAccount> {
 
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
-      final email = prefs.getString('email');
+      final workerID = prefs.getString('workerID');
 
       final extension = image.path.split('.').last;
       await s3Storage.putObject(
         'moscaresolutions',
-        '$company/worker/$email/profile_picture/pfp.$extension',
+        '$company/worker/$workerID/profile_picture/pfp.$extension',
         Stream<Uint8List>.value(Uint8List.fromList(image.readAsBytesSync())),
         onProgress: (progress) {
           log('Progress: $progress');
@@ -163,11 +163,11 @@ class _MyAccountState extends State<MyAccount> {
 
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
-      final email = prefs.getString('email');
+      final workerID = prefs.getString('workerID');
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
-        '$company/worker/$email/profile_picture/pfp.jpg',
+        '$company/worker/$workerID/profile_picture/pfp.jpg',
       );
 
       log('URL: $url');

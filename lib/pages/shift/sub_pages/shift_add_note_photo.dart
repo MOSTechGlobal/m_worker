@@ -13,6 +13,7 @@ import '../../../bloc/theme_bloc.dart';
 
 class ShiftAddNotePhoto extends StatefulWidget {
   final dynamic clientID;
+
   const ShiftAddNotePhoto({super.key, required this.clientID});
 
   @override
@@ -24,6 +25,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
   late final _noteController = TextEditingController();
   XFile? image0;
   late dynamic clientData = {};
+
+  late dynamic _progressState = 0.0;
 
   Future<void> _fetchClientData() async {
     try {
@@ -45,7 +48,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
       // TODO: fix the data to be sent and the endpoint to be called after confirming and fixing the backend
       final data = {
         'Note': note,
-        'NoteType': 'APP NOTE', // TODO: Confirm note category to get from maintenance
+        'NoteType': 'APP NOTE',
+        // TODO: Confirm note category to get from maintenance
         'CreatedBy': email,
         'VisibleWorkerApp': 1,
         // 'VisibleClientApp': 1,
@@ -57,7 +61,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
       Navigator.of(context).pop();
     } else {
       final snackBar = SnackBar(
-        content: const Text('Note cannot be empty', style: TextStyle(fontSize: 16, color: Colors.white)),
+        content: const Text('Note cannot be empty',
+            style: TextStyle(fontSize: 16, color: Colors.white)),
         duration: const Duration(seconds: 2),
         backgroundColor: Colors.red.withOpacity(0.8),
       );
@@ -78,14 +83,18 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
 
-      final objectLocation = '$company/client/${clientData['Email']}/notes/${image0!.path.split('/').last}';
+      final objectLocation =
+          '$company/client/${widget.clientID}/notes/${image0!.path.split('/').last}';
 
       await s3Storage.putObject(
         'moscaresolutions',
-          objectLocation,
-        Stream<Uint8List>.value(Uint8List.fromList(File(image0!.path).readAsBytesSync())),
+        objectLocation,
+        Stream<Uint8List>.value(
+            Uint8List.fromList(File(image0!.path).readAsBytesSync())),
         onProgress: (progress) {
-          log('Progress: $progress');
+          setState(() {
+            _progressState = progress.toDouble() / File(image0!.path).lengthSync();
+          });
         },
       );
 
@@ -95,8 +104,10 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
         // TODO: redesign the existing table structure
         // TODO: fix the data to be sent and the endpoint to be called after confirming and fixing the backend
         final data = {
-          'Note': 'https://moscaresolutions.s3.ap-southeast-2.amazonaws.com/$objectLocation',
-          'NoteType': 'APP NOTE', // TODO: Confirm note category to get from maintenance
+          'Note':
+              'https://moscaresolutions.s3.ap-southeast-2.amazonaws.com/$objectLocation',
+          'NoteType': 'APP NOTE',
+          // TODO: Confirm note category to get from maintenance
           'CreatedBy': email,
           'VisibleWorkerApp': 1,
           // 'VisibleClientApp': 1,
@@ -197,10 +208,23 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
                       },
                     ),
                     const SizedBox(height: 15),
+                    if (image0 != null)
+                      Column(
+                        children: [
+                          LinearProgressIndicator(
+                            value: _progressState,
+                            backgroundColor: colorScheme.secondary.withOpacity(0.5),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                colorScheme.primary),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
                     // info text
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: colorScheme.tertiary.withOpacity(0.5)),
+                        Icon(Icons.info_outline,
+                            color: colorScheme.tertiary.withOpacity(0.5)),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
@@ -232,17 +256,15 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
 
     if (index == 0) {
       // Handle image upload
-      setState(() {
-        index = null;
-      });
       _uploadImage();
     } else if (index == 1) {
       // Handle taking a photo
-      setState(() {
-        index = null;
-      });
       _takePhoto();
     }
+
+    setState(() {
+      _selectedSegment = null;
+    });
   }
 
   Future<void> _uploadImage() async {

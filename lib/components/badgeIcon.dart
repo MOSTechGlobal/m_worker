@@ -14,8 +14,8 @@ class BadgeIcon extends StatelessWidget {
         Icon(icon),
         if (badgeCount > 0)
           Positioned(
-            right: -5,
-            top: -5,
+            right: -8,
+            top: -10,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(

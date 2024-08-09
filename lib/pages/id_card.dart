@@ -80,11 +80,11 @@ class _IdCardState extends State<IdCard> {
 
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
-      final email = prefs.getString('email');
+      final workerID = prefs.getString('workerID');
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
-        '$company/worker/$email/profile_picture/pfp.jpg',
+        '$company/worker/$workerID/profile_picture/pfp.jpg',
       );
       log('URL: $url');
 
@@ -134,7 +134,7 @@ class _IdCardState extends State<IdCard> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      if (_pfp != null)
+                      _pfp != null?
                         FadeInImage.assetNetwork(
                           placeholder: 'assets/images/id_card_pfp_placeholder.png',
                           image: _pfp!,
@@ -142,7 +142,7 @@ class _IdCardState extends State<IdCard> {
                           height: 150,
                           fit: BoxFit.cover,
                           fadeInDuration: const Duration(milliseconds: 500),
-                        ),
+                        ): const SizedBox(height: 150),
                       const SizedBox(height: 20),
                       Text(
                         workerData['FirstName'] + ' ' + workerData['LastName'],

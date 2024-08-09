@@ -18,7 +18,8 @@ class ShiftRoot extends StatefulWidget {
   State<ShiftRoot> createState() => _ShiftRootState();
 }
 
-class _ShiftRootState extends State<ShiftRoot> with SingleTickerProviderStateMixin {
+class _ShiftRootState extends State<ShiftRoot>
+    with SingleTickerProviderStateMixin {
   Map<String, dynamic> shiftData = {};
   List<dynamic> clientmWorkerData = [];
   late int _bottomNavIndex = 0;
@@ -37,18 +38,23 @@ class _ShiftRootState extends State<ShiftRoot> with SingleTickerProviderStateMix
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final shift = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final shift =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     shiftData = Map<String, dynamic>.from(shift);
-    hasAppNote = shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
+    hasAppNote =
+        shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
     _fetchClientmWorkerData();
   }
 
   Future<void> _fetchClientmWorkerData() async {
     try {
-      final response = await Api.get('getClientDetailsVWorkerData/${shiftData["ClientID"]}');
+      final response =
+          await Api.get('getClientDetailsVWorkerData/${shiftData["ClientID"]}');
       setState(() {
         clientmWorkerData = response['data'];
-        shiftAlert = clientmWorkerData.isNotEmpty ? clientmWorkerData[0]['ShiftAlert'] ?? '' : '';
+        shiftAlert = clientmWorkerData.isNotEmpty
+            ? clientmWorkerData[0]['ShiftAlert'] ?? ''
+            : '';
         hasProfile = clientmWorkerData.isNotEmpty;
       });
       log(clientmWorkerData.toString());
@@ -114,9 +120,29 @@ class _ShiftRootState extends State<ShiftRoot> with SingleTickerProviderStateMix
             ],
             bottom: TabBar(
               controller: _tabController,
-              tabs: const [
-                Tab(text: 'Details'),
-                Tab(text: 'Notes'),
+              tabs: [
+                const Tab(
+                  icon: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.info_outlined),
+                      SizedBox(width: 4),
+                      Text('Details'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  icon: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      hasAppNote
+                          ? const BadgeIcon(icon: Icons.note_outlined, badgeCount: 1)
+                          : const Icon(Icons.note_outlined),
+                      const SizedBox(width: 4),
+                      const Text('Notes'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -177,7 +203,7 @@ class _ShiftRootState extends State<ShiftRoot> with SingleTickerProviderStateMix
               ShiftNotes(
                 shift: shiftData,
                 clientmWorkerData:
-                clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {},
+                    clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {},
               ),
             ],
           ),
