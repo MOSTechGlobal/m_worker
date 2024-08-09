@@ -97,17 +97,15 @@ class _ShiftRootState extends State<ShiftRoot> {
               animationDuration: const Duration(milliseconds: 300),
               selectedIndex: _selectedIndex,
               onDestinationSelected: (index) {
-                if (index < 5) {
-                  if (index == 3) {
-                    showShiftProfileDialog(context,
-                        clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {});
-                  } else {
-                    _pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeInOut,
-                    );
-                  }
+                if (index < 4) {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeInOut,
+                  );
+                } else if (index == 4) {
+                  showShiftProfileDialog(context,
+                      clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {});
                 } else if (index == 5) {
                   _showMoreOptions(context, colorScheme);
                 }
@@ -131,18 +129,17 @@ class _ShiftRootState extends State<ShiftRoot> {
                   label: 'Notes',
                   selectedIcon: const Icon(Icons.note),
                 ),
-                 NavigationDestination(
-                  icon: hasProfile
-                      ? const BadgeIcon(
-                          icon: Icons.person_pin, badgeCount: 1)
-                      : const Icon(Icons.person_pin),
-                  label: 'Profile',
-                  selectedIcon: const Icon(Icons.person_pin),
-                ),
                 const NavigationDestination(
                   icon: Icon(Icons.upload_file),
                   label: 'Add Note/Photo',
                   selectedIcon: Icon(Icons.upload_file_rounded),
+                ),
+                NavigationDestination(
+                  icon: hasProfile
+                      ? const BadgeIcon(icon: Icons.person_pin, badgeCount: 1)
+                      : const Icon(Icons.person_pin),
+                  label: 'Profile',
+                  selectedIcon: const Icon(Icons.person_pin),
                 ),
                 const NavigationDestination(
                   icon: Icon(Icons.more_outlined),
@@ -155,15 +152,13 @@ class _ShiftRootState extends State<ShiftRoot> {
           body: PageView(
             controller: _pageController,
             onPageChanged: (index) {
-              if (index < 5) {
-                if (index == 3) {
-                  showShiftProfileDialog(context,
-                      clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {});
-                } else {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                }
+              if (index < 4) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              } else if (index == 4) {
+                showShiftProfileDialog(context,
+                    clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {});
               } else if (index == 5) {
                 _showMoreOptions(context, colorScheme);
               }

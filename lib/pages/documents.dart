@@ -96,9 +96,9 @@ class _DocumentsState extends State<Documents> {
         region: 'ap-southeast-2',
       );
 
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
+      final prefs = await SharedPreferences.getInstance();
+      final company = prefs.getString('company');
+      final email = prefs.getString('email');
 
       await s3Storage.putObject(
         'moscaresolutions',
@@ -129,9 +129,8 @@ class _DocumentsState extends State<Documents> {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       final workerID = prefs.getString('workerID');
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
+      final company = prefs.getString('company');
+      final email = prefs.getString('email');
       final response = await Api.post('insertWorkerDocumentData/$workerID', {
         'DocName': documentDetails['DocName'],
         'Category': documentDetails['DocCategory'],

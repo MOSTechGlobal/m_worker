@@ -51,8 +51,7 @@ class _MyAccountState extends State<MyAccount> {
 
   void _fetchPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    const secureStorage = FlutterSecureStorage();
-    String? company = await secureStorage.read(key: 'company');
+    final company = prefs.getString('company');
     setState(() {
       _companyName = company ?? '';
       showWeather = prefs.getBool('showWeather') ?? true;
@@ -131,9 +130,9 @@ class _MyAccountState extends State<MyAccount> {
         region: 'ap-southeast-2',
       );
 
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
+      final prefs = await SharedPreferences.getInstance();
+      final company = prefs.getString('company');
+      final email = prefs.getString('email');
 
       final extension = image.path.split('.').last;
       await s3Storage.putObject(
@@ -162,9 +161,10 @@ class _MyAccountState extends State<MyAccount> {
         region: 'ap-southeast-2',
       );
 
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
+      final prefs = await SharedPreferences.getInstance();
+      final company = prefs.getString('company');
+      final email = prefs.getString('email');
+
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
         '$company/worker/$email/profile_picture/pfp.jpg',

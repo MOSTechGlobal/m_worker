@@ -128,7 +128,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
     final nextWeek = weekStart.add(const Duration(days: 7));
 
     return Card(
-      color: widget.colorScheme.secondaryContainer.withOpacity(0.8),
+      color: widget.colorScheme.secondaryContainer.withOpacity(0.4),
+      elevation: 0,
       borderOnForeground: true,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),

@@ -144,6 +144,8 @@ class _TimesheetsState extends State<Timesheets> {
     });
   }
 
+  // TODO: what to do with modification of hours?
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeMode>(
@@ -153,6 +155,26 @@ class _TimesheetsState extends State<Timesheets> {
         return Scaffold(
           appBar: AppBar(
             title: const Text('Timesheets'),
+            actions: [
+              IconButton(
+                icon: Icon(Icons.add, color: colorScheme.primary),
+                color: colorScheme.onPrimary,
+                onPressed: () {
+                  setState(() {
+                    final newShift = {
+                      'ShiftStart': DateTime.now().toIso8601String(),
+                      'ShiftEnd': DateTime.now().add(const Duration(hours: 8)).toIso8601String(),
+                      'ClientFirstName': 'New',
+                      'ClientLastName': 'Client',
+                      'PayRate': 25.0,
+                      'Hours': 8,
+                    };
+                    shifts.add(newShift);
+                    _controllers[shifts.length - 1] = TextEditingController(text: '8');
+                  });
+                },
+              ),
+            ],
           ),
           body: SafeArea(
             child: Column(
@@ -306,7 +328,8 @@ class _TimesheetsState extends State<Timesheets> {
                         ),
                         // Show daily total
                         Card(
-                          color: colorScheme.secondaryContainer.withOpacity(0.2),
+                          color: colorScheme.secondaryContainer.withOpacity(0.8),
+                          elevation: 0,
                           margin: const EdgeInsets.all(8),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -314,7 +337,7 @@ class _TimesheetsState extends State<Timesheets> {
                               Expanded(
                                 flex: 2,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
+                                  padding: const EdgeInsets.all(16.0),
                                   child: Text(
                                     textAlign: TextAlign.left,
                                     'Daily Total: ',
@@ -328,7 +351,7 @@ class _TimesheetsState extends State<Timesheets> {
                               Expanded(
                                 flex: 2,
                                 child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
+                                  padding: const EdgeInsets.all(16.0),
                                   child: Text(
                                     textAlign: TextAlign.right,
                                     '\$${dailyTotal.toStringAsFixed(2)}',
@@ -344,7 +367,8 @@ class _TimesheetsState extends State<Timesheets> {
                         ),
                         // Show weekly total
                         Card(
-                          color: colorScheme.secondaryContainer.withOpacity(0.2),
+                          color: Colors.transparent,
+                          elevation: 0,
                           margin: const EdgeInsets.all(8),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -406,28 +430,6 @@ class _TimesheetsState extends State<Timesheets> {
                           style: TextStyle(
                               fontWeight: FontWeight.w800, fontSize: 16),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        color: colorScheme.onPrimary,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          fixedSize: const Size(48, 48),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            final newShift = {
-                              'ShiftStart': DateTime.now().toIso8601String(),
-                              'ShiftEnd': DateTime.now().add(const Duration(hours: 8)).toIso8601String(),
-                              'ClientFirstName': 'New',
-                              'ClientLastName': 'Client',
-                              'PayRate': 25.0,
-                              'Hours': 8,
-                            };
-                            shifts.add(newShift);
-                            _controllers[shifts.length - 1] = TextEditingController(text: '8');
-                          });
-                        },
                       ),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(

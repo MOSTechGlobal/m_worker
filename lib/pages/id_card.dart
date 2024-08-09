@@ -58,9 +58,7 @@ class _IdCardState extends State<IdCard> {
   void _fetchData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final workerID = prefs.getString('workerID');
-
-    const storage = FlutterSecureStorage();
-    final company = await storage.read(key: 'company');
+    final company = prefs.getString('company');
 
     final res = await Api.get('getWorkerMasterData/$workerID');
     setState(() {
@@ -80,9 +78,9 @@ class _IdCardState extends State<IdCard> {
         region: 'ap-southeast-2',
       );
 
-      const storage = FlutterSecureStorage();
-      final company = await storage.read(key: 'company');
-      final email = await storage.read(key: 'email');
+      final prefs = await SharedPreferences.getInstance();
+      final company = prefs.getString('company');
+      final email = prefs.getString('email');
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',

@@ -124,6 +124,7 @@ class _WeatherWidgetState extends State<WeatherWidget> {
           padding: const EdgeInsets.all(8.0),
           child: Card(
             color: colorScheme.secondaryContainer.withOpacity(0.5),
+            elevation: 0,
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(

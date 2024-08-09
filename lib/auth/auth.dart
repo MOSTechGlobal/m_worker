@@ -17,7 +17,6 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   final _auth = LocalAuthentication();
-  final _storage = const FlutterSecureStorage();
   bool isAuthenticating = false;
   bool isBiometricsEnabled = false;
   bool isAuthenticated = false;
@@ -121,8 +120,9 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _signInWithSavedCredentials() async {
-    final email = await _storage.read(key: 'email');
-    final password = await _storage.read(key: 'password');
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+   final email = prefs.getString('email');
+   final password = prefs.getString('password');
 
     if (email == null || password == null) {
       log('No saved credentials found');
