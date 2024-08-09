@@ -15,7 +15,8 @@ class ShiftProfile extends StatelessWidget {
       builder: (context, state) {
         final colorScheme = Theme.of(context).colorScheme;
         return AlertDialog(
-          backgroundColor: colorScheme.primaryContainer,
+          backgroundColor: colorScheme.secondaryContainer,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           scrollable: true,
           content: Column(
             mainAxisAlignment: MainAxisAlignment.start,
