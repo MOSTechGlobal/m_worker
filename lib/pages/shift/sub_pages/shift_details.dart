@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:slide_to_act/slide_to_act.dart';
 
 import '../../../bloc/theme_bloc.dart';
 import '../../../components/shift_detail/shift_detail_3rd_card.dart';
 
 class ShiftDetails extends StatefulWidget {
   final Map<dynamic, dynamic> shift;
-  const ShiftDetails({super.key, required this.shift});
+  final ValueChanged<String> onStatusChanged;
+  const ShiftDetails(
+      {super.key, required this.shift, required this.onStatusChanged});
 
   @override
   State<ShiftDetails> createState() => _ShiftDetailsState();
@@ -26,6 +29,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     shift.clear();
     shift.addAll(widget.shift);
     _fetchClientData(clientID: shift['ClientID']);
+    _fetchShiftData(shift['ShiftID']);
   }
 
   Future<void> _fetchClientData({required int clientID}) async {
@@ -49,7 +53,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
 
   String calculateShiftDuration(String shiftStart, String shiftEnd) {
     final start =
-    DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftStart, true);
+        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftStart, true);
     var end = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftEnd, true);
 
     if (end.isBefore(start)) {
@@ -63,6 +67,61 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     return hours > 0
         ? '$hours hr ${minutes > 0 ? '$minutes min' : ''}'
         : '$minutes min';
+  }
+
+  Future<void> _fetchShiftData(shiftID) async {
+    Api.get('getShiftMainData/$shiftID').then((response) {
+      setState(() {
+        shift.clear();
+        shift.addAll(response['data'][0]);
+      });
+      log('Shift data fetched successfully: $shift');
+    });
+  }
+
+  Future<void> _changeShiftStatus(String type, int shiftID,
+      {String? reason}) async {
+    String status;
+    if (type == 'start') {
+      status = 'In Progress';
+    } else if (type == 'end') {
+      final shiftEnd = DateTime.parse(shift['ShiftEnd']);
+      final now = DateTime.now();
+      final duration = now.difference(shiftEnd);
+
+      if (now.isBefore(shiftEnd)) {
+        status = 'Completed-Early';
+        reason = 'Shift ended early by ${duration.inMinutes} minutes';
+      } else {
+        status = 'Completed-Late';
+        reason = 'Shift ended late by ${duration.inMinutes} minutes';
+      }
+    } else {
+      status = 'Cancelled';
+    }
+
+    log('STATUS: $status');
+    try {
+      final response = await Api.put('changeShiftStatus', {
+        'ShiftID': shiftID,
+        'ShiftStatus': status,
+        if (reason != null) 'ShiftStatusReason': reason,
+      });
+
+      if (response['success']) {
+        log('Shift status changed to $status');
+        // Fetch updated shift data
+        await _fetchShiftData(shiftID);
+        setState(() {
+          shift['ShiftStatus'] = status;
+        });
+        widget.onStatusChanged(status); // Notify ShiftRoot or parent widget
+      } else {
+        log('Error changing shift status');
+      }
+    } catch (e) {
+      log('Error changing shift status: $e');
+    }
   }
 
   @override
@@ -103,7 +162,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                             Text(
                               'Age: ${clientData['Age']}',
                               style: TextStyle(
-                                fontSize: 16,
+                                  fontSize: 16,
                                   color: colorScheme.onPrimaryContainer),
                             ),
                           ],
@@ -125,76 +184,85 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                shift['ShiftStatus'] == "Not Started" ?
-                Card(
-                  color: Colors.green,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Start Shift',
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Card(
+                      color:
+                          shift['ShiftStatus'].toString().contains('Completed')
+                              ? Colors.lightGreen
+                              : shift['ShiftStatus'] == 'Cancelled'
+                                  ? Colors.red
+                                  : shift['ShiftStatus'] == 'In Progress'
+                                      ? Colors.amber
+                                      : colorScheme.secondaryContainer,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          '${shift['ShiftStatus']}',
                           style: TextStyle(
-                              color: colorScheme.onSurface, fontSize: 16),
+                              color: colorScheme.onSurface,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ) : shift['ShiftStatus'] == "In Progress" ?
-                Card(
-                  color: Colors.yellow,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'End Shift',
-                          style: TextStyle(
-                              color: colorScheme.onSurface, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ) : shift['ShiftStatus'] == "Completed" ?
-                Card(
-                  color: Colors.red,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Shift Completed',
-                          style: TextStyle(
-                              color: colorScheme.onSurface, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ) : Card(
-                  color: colorScheme.secondaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Shift Status: ',
-                          style: TextStyle(
-                              color: colorScheme.onSurface, fontSize: 16),
-                        ),
-                        Text(
-                          shift['ShiftStatus'],
-                          style: TextStyle(
-                              color: colorScheme.primary, fontSize: 18),
-                        ),
-                      ],
-                    ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
+                if (shift['ShiftStatus'] == 'Not Started')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0, vertical: 10),
+                    child: SlideAction(
+                      sliderButtonIcon: Icon(
+                        Icons.arrow_forward,
+                        color: colorScheme.onPrimary,
+                        size: 30,
+                      ),
+                      borderRadius: 15,
+                      innerColor: colorScheme.primary,
+                      outerColor: colorScheme.secondaryContainer,
+                      textColor: colorScheme.onPrimary,
+                      animationDuration: const Duration(milliseconds: 500),
+                      submittedIcon: const Icon(
+                        Icons.check,
+                        color: Colors.lightGreen,
+                        size: 30,
+                      ),
+                      text: 'Slide to Start Shift',
+                      textStyle: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      onSubmit: () async {
+                        await _changeShiftStatus('start', shift['ShiftID']);
+                      },
+                    ),
+                  ),
+                if (shift['ShiftStatus'] == 'In Progress')
+                  SizedBox(
+                    width: 150,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        showEndShiftDialog(context, shift, colorScheme);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: colorScheme.errorContainer,
+                        foregroundColor: colorScheme.onErrorContainer,
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.done_outline_rounded),
+                          SizedBox(width: 10),
+                          Text('End Shift'),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 10),
                 Card(
                   color: colorScheme.secondaryContainer,
                   child: Padding(
@@ -214,7 +282,9 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                               DateFormat('dd/MM/yyyy')
                                   .format(DateTime.parse(shift['ShiftStart'])),
                               style: TextStyle(
-                                  color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
+                                  color: colorScheme.primary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -232,9 +302,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 ),
                                 Text(
                                   DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftStart']).toUtc()),
+                                      DateTime.parse(shift['ShiftStart'])
+                                          .toUtc()),
                                   style: TextStyle(
-                                      color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
+                                      color: colorScheme.primary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -248,9 +321,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 ),
                                 Text(
                                   DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftEnd']).toUtc()),
+                                      DateTime.parse(shift['ShiftEnd'])
+                                          .toUtc()),
                                   style: TextStyle(
-                                      color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
+                                      color: colorScheme.primary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -266,7 +342,9 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                   calculateShiftDuration(
                                       shift['ShiftStart'], shift['ShiftEnd']),
                                   style: TextStyle(
-                                      color: colorScheme.primary, fontSize: 18, fontWeight: FontWeight.bold),
+                                      color: colorScheme.primary,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -295,7 +373,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                         ),
                         ShiftDetails3rdCard(
                           title: 'Location: ',
-                          subtitle: '${clientData['AddressLine1'] ?? ''} ${clientData['AddressLine2'] ?? ''} ${clientData['Suburb'] ?? ''} ${clientData['Postcode'] ?? ''}',
+                          subtitle:
+                              '${clientData['AddressLine1'] ?? ''} ${clientData['AddressLine2'] ?? ''} ${clientData['Suburb'] ?? ''} ${clientData['Postcode'] ?? ''}',
                         ),
                         ShiftDetails3rdCard(
                           title: 'DOB: ',
@@ -308,6 +387,39 @@ class _ShiftDetailsState extends State<ShiftDetails> {
               ],
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void showEndShiftDialog(
+      BuildContext context, Map<dynamic, dynamic> shiftData, colorScheme) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('End Shift', style: TextStyle(color: colorScheme.error)),
+          content: Text('Are you sure you want to end this shift?',
+              style: TextStyle(color: colorScheme.primary)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _changeShiftStatus('end', shiftData['ShiftID']);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.errorContainer,
+              ),
+              child: Text('End Shift',
+                  style: TextStyle(color: colorScheme.onErrorContainer)),
+            ),
+          ],
         );
       },
     );

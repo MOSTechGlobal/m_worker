@@ -40,8 +40,7 @@ class _HomePageState extends State<HomePage> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title:
-            Text('Sign Out', style: TextStyle(color: colorScheme.primary)),
+            title: Text('Sign Out', style: TextStyle(color: colorScheme.error)),
             content: Text('Are you sure you want to sign out?',
                 style: TextStyle(color: colorScheme.primary)),
             actions: [
@@ -56,8 +55,11 @@ class _HomePageState extends State<HomePage> {
                   await FirebaseAuth.instance.signOut();
                   Navigator.pop(context);
                 },
+                style: TextButton.styleFrom(
+                  backgroundColor: colorScheme.errorContainer,
+                ),
                 child: Text('Sign Out',
-                    style: TextStyle(color: colorScheme.error)),
+                    style: TextStyle(color: colorScheme.onErrorContainer)),
               ),
             ],
           );
@@ -79,7 +81,7 @@ class _HomePageState extends State<HomePage> {
       prefs = await SharedPreferences.getInstance();
       prefs!.setString('workerID', _worker['WorkerID'].toString());
       final workerShifts =
-      await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
+          await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
         try {
@@ -205,8 +207,8 @@ class _HomePageState extends State<HomePage> {
                           style: ButtonStyle(
                             visualDensity: VisualDensity.compact,
                             padding:
-                            WidgetStateProperty.resolveWith<EdgeInsets>(
-                                  (Set<WidgetState> states) {
+                                WidgetStateProperty.resolveWith<EdgeInsets>(
+                              (Set<WidgetState> states) {
                                 if (states.contains(WidgetState.hovered)) {
                                   return const EdgeInsets.all(10);
                                 }
@@ -215,8 +217,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                             enableFeedback: true,
                             foregroundColor:
-                            WidgetStateProperty.resolveWith<Color>(
-                                  (Set<WidgetState> states) {
+                                WidgetStateProperty.resolveWith<Color>(
+                              (Set<WidgetState> states) {
                                 if (states.contains(WidgetState.disabled)) {
                                   return colorScheme.secondary;
                                 }
@@ -224,7 +226,7 @@ class _HomePageState extends State<HomePage> {
                               },
                             ),
                             animationDuration:
-                            const Duration(milliseconds: 300),
+                                const Duration(milliseconds: 300),
                           ),
                           showSelectedIcon: false,
                           segments: const [
@@ -260,72 +262,84 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: isLoading
                         ? const Center(
-                      child: SizedBox(
-                        width: 150,
-                        child: LinearProgressIndicator(),
-                      ),
-                    )
+                            child: SizedBox(
+                              width: 150,
+                              child: LinearProgressIndicator(),
+                            ),
+                          )
                         : errorMessage != null
-                        ? Center(
-                        child: Text(errorMessage!,
-                            style:
-                            TextStyle(color: colorScheme.primary)))
-                        : RefreshIndicator(
-                      onRefresh: _fetchWorkerShifts,
-                      child: ListView.builder(
-                        itemCount: _selectedSegment.contains('Today')
-                            ? todayShifts.length
-                            : sortedFortnightDates.length,
-                        itemBuilder: (context, index) {
-                          if (_selectedSegment.contains('Today')) {
-                            return mShiftTile(
-                              key: ValueKey(todayShifts[index]['ShiftID']),
-                              date: 'Today',
-                              shiftsForDate: todayShifts[index],
-                              colorScheme: colorScheme,
-                            );
-                          } else {
-                            final date = sortedFortnightDates[index];
-                            return Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 18),
-                                  child: Text(
-                                    DateFormat('EE d MMMM')
-                                        .format(DateTime.parse(date)),
-                                    style: TextStyle(
-                                        fontSize: 16,
-                                        color: colorScheme.secondary),
-                                  ),
-                                ),
-                                ListView.builder(
-                                  shrinkWrap: true,
-                                  physics:
-                                  const NeverScrollableScrollPhysics(),
-                                  itemCount:
-                                  groupedFortnightShifts[date]!
-                                      .length,
-                                  itemBuilder: (context, shiftIndex) {
-                                    final shift =
-                                    groupedFortnightShifts[date]![
-                                    shiftIndex];
-                                    return mShiftTile(
-                                      key: ValueKey(shift['ShiftID']),
-                                      date: date,
-                                      shiftsForDate: shift,
-                                      colorScheme: colorScheme,
-                                    );
+                            ? Center(
+                                child: Text(errorMessage!,
+                                    style:
+                                        TextStyle(color: colorScheme.primary)))
+                            : RefreshIndicator(
+                                onRefresh: _fetchWorkerShifts,
+                                child: ListView.builder(
+                                  itemCount: _selectedSegment.contains('Today')
+                                      ? todayShifts.length
+                                      : sortedFortnightDates.length,
+                                  itemBuilder: (context, index) {
+                                    if (_selectedSegment.contains('Today')) {
+                                      if (todayShifts.isEmpty) {
+                                        return Center(
+                                          child: Text('No shifts found',
+                                              style: TextStyle(
+                                                  color: colorScheme.primary)),
+                                        );
+                                      } else {
+                                        final shift = todayShifts[index];
+                                        return mShiftTile(
+                                          key: ValueKey(shift['ShiftID']),
+                                          date: DateFormat('yyyy-MM-dd').format(
+                                              DateTime.parse(
+                                                  shift['ShiftStart'])),
+                                          shiftsForDate: shift,
+                                          colorScheme: colorScheme,
+                                        );
+                                      }
+                                    } else {
+                                      final date = sortedFortnightDates[index];
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 18),
+                                            child: Text(
+                                              DateFormat('EE d MMMM')
+                                                  .format(DateTime.parse(date)),
+                                              style: TextStyle(
+                                                  fontSize: 16,
+                                                  color: colorScheme.secondary),
+                                            ),
+                                          ),
+                                          ListView.builder(
+                                            shrinkWrap: true,
+                                            physics:
+                                                const NeverScrollableScrollPhysics(),
+                                            itemCount:
+                                                groupedFortnightShifts[date]!
+                                                    .length,
+                                            itemBuilder: (context, shiftIndex) {
+                                              final shift =
+                                                  groupedFortnightShifts[date]![
+                                                      shiftIndex];
+                                              return mShiftTile(
+                                                key: ValueKey(shift['ShiftID']),
+                                                date: date,
+                                                shiftsForDate: shift,
+                                                colorScheme: colorScheme,
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      );
+                                    }
+                                    return null;
                                   },
                                 ),
-                              ],
-                            );
-                          }
-                        },
-                      ),
-                    ),
+                              ),
                   )
                 ],
               ),

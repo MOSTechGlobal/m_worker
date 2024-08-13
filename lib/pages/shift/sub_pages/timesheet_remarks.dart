@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-import '../../../../bloc/theme_bloc.dart';
+import '../../../bloc/theme_bloc.dart';
 
 class TimesheetRemarks extends StatelessWidget {
   const TimesheetRemarks({super.key});
@@ -12,7 +12,9 @@ class TimesheetRemarks extends StatelessWidget {
       builder: (context, state) {
         final colorScheme = Theme.of(context).colorScheme;
         final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
-        final bottomSheetHeight = isKeyboardVisible ? MediaQuery.of(context).size.height * 0.7 : 300.0;
+        final bottomSheetHeight = isKeyboardVisible
+            ? MediaQuery.of(context).size.height * 0.7
+            : 300.0;
         return SizedBox(
           height: bottomSheetHeight,
           child: Card(

@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:s3_storage/s3_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../bloc/theme_bloc.dart';
 
 class ShiftAddNotePhoto extends StatefulWidget {
@@ -93,7 +94,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
             Uint8List.fromList(File(image0!.path).readAsBytesSync())),
         onProgress: (progress) {
           setState(() {
-            _progressState = progress.toDouble() / File(image0!.path).lengthSync();
+            _progressState =
+                progress.toDouble() / File(image0!.path).lengthSync();
           });
         },
       );
@@ -138,107 +140,106 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
           child: SizedBox(
             width: double.infinity,
             height: 400.0,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  children: [
-                    Text(
-                      'Add Note',
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: 20,
-                      ),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  Text(
+                    'Add Note',
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 20,
                     ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _noteController,
-                      maxLines: 5,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter note here',
-                      ),
-                      style: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: 16,
-                      ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _noteController,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      border: OutlineInputBorder(),
+                      hintText: 'Enter note here',
                     ),
-                    const SizedBox(height: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                      ),
-                      onPressed: () {
-                        _saveNote();
-                      },
-                      child: const Text('Save'),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontSize: 16,
                     ),
-                    const SizedBox(height: 10),
-                    SegmentedButton<int>(
-                      segments: [
-                        ButtonSegment(
-                          value: 0,
-                          label: Text(
-                            'Upload Image',
-                            style: TextStyle(
-                                color: colorScheme.primary, fontSize: 14),
-                          ),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
+                    onPressed: () {
+                      _saveNote();
+                    },
+                    child: const Text('Save'),
+                  ),
+                  const SizedBox(height: 10),
+                  SegmentedButton<int>(
+                    segments: [
+                      ButtonSegment(
+                        value: 0,
+                        label: Text(
+                          'Upload Image',
+                          style: TextStyle(
+                              color: colorScheme.primary, fontSize: 14),
                         ),
-                        ButtonSegment(
-                          value: 1,
-                          label: Text(
-                            'Take Photo',
-                            style: TextStyle(
-                                color: colorScheme.primary, fontSize: 14),
-                          ),
-                        ),
-                      ],
-                      emptySelectionAllowed: true,
-                      selected: _selectedSegment != null
-                          ? {_selectedSegment!}
-                          : <int>{},
-                      showSelectedIcon: false,
-                      onSelectionChanged: (Set<int> selected) {
-                        setState(() {
-                          _selectedSegment =
-                              selected.isNotEmpty ? selected.first : null;
-                        });
-                        _handleSegmentSelection(_selectedSegment);
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    if (image0 != null)
-                      Column(
-                        children: [
-                          LinearProgressIndicator(
-                            value: _progressState,
-                            backgroundColor: colorScheme.secondary.withOpacity(0.5),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                colorScheme.primary),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
                       ),
-                    // info text
-                    Row(
+                      ButtonSegment(
+                        value: 1,
+                        label: Text(
+                          'Take Photo',
+                          style: TextStyle(
+                              color: colorScheme.primary, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                    emptySelectionAllowed: true,
+                    selected: _selectedSegment != null
+                        ? {_selectedSegment!}
+                        : <int>{},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (Set<int> selected) {
+                      setState(() {
+                        _selectedSegment =
+                            selected.isNotEmpty ? selected.first : null;
+                      });
+                      _handleSegmentSelection(_selectedSegment);
+                    },
+                  ),
+                  const SizedBox(height: 15),
+                  if (image0 != null)
+                    Column(
                       children: [
-                        Icon(Icons.info_outline,
-                            color: colorScheme.tertiary.withOpacity(0.5)),
-                        const SizedBox(width: 5),
-                        Expanded(
-                          child: Text(
-                            'Note: You can add a note or a photo, but not both.',
-                            style: TextStyle(
-                              color: colorScheme.tertiary.withOpacity(0.5),
-                              fontSize: 14,
-                            ),
-                          ),
-                        )
+                        LinearProgressIndicator(
+                          value: _progressState,
+                          backgroundColor:
+                              colorScheme.secondary.withOpacity(0.5),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                              colorScheme.primary),
+                        ),
+                        const SizedBox(height: 10),
                       ],
-                    )
-                  ],
-                ),
+                    ),
+                  // info text
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: colorScheme.tertiary.withOpacity(0.5)),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          'Note: You can add a note or a photo, but not both.',
+                          style: TextStyle(
+                            color: colorScheme.tertiary.withOpacity(0.5),
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    ],
+                  )
+                ],
               ),
             ),
           ),

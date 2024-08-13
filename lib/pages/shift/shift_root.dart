@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/badgeIcon.dart';
-import 'package:m_worker/pages/shift/sub_pages/more/timesheet_remarks.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_add_note_photo.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_notes.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_profile.dart';
+import 'package:m_worker/pages/shift/sub_pages/timesheet_remarks.dart';
 import 'package:m_worker/utils/api.dart';
 
 class ShiftRoot extends StatefulWidget {
@@ -73,17 +73,11 @@ class _ShiftRootState extends State<ShiftRoot>
       builder: (context) {
         return AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Text(
-            'Shift Alert',
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-          content: Text(
-            shiftAlert,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontSize: 20,
-            ),
-          ),
+          title: Text('Shift Alert',
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          content: Text(shiftAlert,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary, fontSize: 20)),
           actions: [
             TextButton(
               onPressed: () {
@@ -95,6 +89,12 @@ class _ShiftRootState extends State<ShiftRoot>
         );
       },
     );
+  }
+
+  void _updateShiftStatus(String newStatus) {
+    setState(() {
+      shiftData['ShiftStatus'] = newStatus;
+    });
   }
 
   @override
@@ -136,7 +136,8 @@ class _ShiftRootState extends State<ShiftRoot>
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       hasAppNote
-                          ? const BadgeIcon(icon: Icons.note_outlined, badgeCount: 1)
+                          ? const BadgeIcon(
+                              icon: Icons.note_outlined, badgeCount: 1)
                           : const Icon(Icons.note_outlined),
                       const SizedBox(width: 4),
                       const Text('Notes'),
@@ -181,12 +182,13 @@ class _ShiftRootState extends State<ShiftRoot>
                 ),
                 NavigationDestination(
                   icon: hasProfile
-                      ? const BadgeIcon(icon: Icons.person_pin, badgeCount: 1)
+                      ? const BadgeIcon(icon: Icons.person_pin, badgeCount: -1)
                       : const Icon(Icons.person_pin),
                   label: 'Profile',
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.more_time),
+                NavigationDestination(
+                  enabled: shiftData['ShiftStatus'] != 'Not Started',
+                  icon: const Icon(Icons.more_time),
                   label: 'Timesheet Remarks',
                 ),
                 const NavigationDestination(
@@ -199,7 +201,10 @@ class _ShiftRootState extends State<ShiftRoot>
           body: TabBarView(
             controller: _tabController,
             children: [
-              ShiftDetails(shift: shiftData),
+              ShiftDetails(
+                shift: shiftData,
+                onStatusChanged: _updateShiftStatus,
+              ),
               ShiftNotes(
                 shift: shiftData,
                 clientmWorkerData:

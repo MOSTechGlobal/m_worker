@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
-  static const String baseUrl = 'https://moscare-api-master.vercel.app'; //'http://192.168.0.110:5000'; ////https://moscare-api-master.vercel.app
+  static const String baseUrl = 'http://192.168.0.110:5000'; //'http://192.168.0.110:5000'; ////https://moscare-api-master.vercel.app
 
   static Future<String?> _refreshToken() async {
     try {

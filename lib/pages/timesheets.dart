@@ -24,7 +24,8 @@ class _TimesheetsState extends State<Timesheets> {
   List<Map<String, dynamic>> shifts = [];
 
   // Controllers for editable fields
-  final Map<int, TextEditingController> _controllers = {};
+  final Map<int, TextEditingController> _hrControllers = {};
+  final Map<int, TextEditingController> _kmControllers = {};
 
   Future<void> _fetchShifts() async {
     setState(() {
@@ -52,13 +53,23 @@ class _TimesheetsState extends State<Timesheets> {
 
   void _initializeControllers() {
     // Initialize controllers for each shift
-    _controllers.clear(); // Clear existing controllers
+    _hrControllers.clear(); // Clear existing controllers
     for (int i = 0; i < shifts.length; i++) {
-      _controllers[i] = TextEditingController(
+      _hrControllers[i] = TextEditingController(
         text: calculateShiftHours(shifts[i]).toStringAsFixed(2),
       );
       setState(() {
         shifts[i]['Hours'] = calculateShiftHours(shifts[i]);
+      });
+    }
+
+    _kmControllers.clear(); // Clear existing controllers
+    for (int i = 0; i < shifts.length; i++) {
+      _kmControllers[i] = TextEditingController(
+        text: shifts[i]['Km']?.toStringAsFixed(2) ?? '0',
+      );
+      setState(() {
+        shifts[i]['Km'] = shifts[i]['Km'] ?? 0;
       });
     }
   }
@@ -72,7 +83,7 @@ class _TimesheetsState extends State<Timesheets> {
   @override
   void dispose() {
     // Dispose controllers when no longer needed
-    for (var controller in _controllers.values) {
+    for (var controller in _hrControllers.values) {
       controller.dispose();
     }
     super.dispose();
@@ -140,7 +151,7 @@ class _TimesheetsState extends State<Timesheets> {
     final hours = double.tryParse(value) ?? 0;
     setState(() {
       shifts[index]['Hours'] = hours;
-      _controllers[index]?.text = hours.toStringAsFixed(2); // Update controller text
+      _hrControllers[index]?.text = hours.toStringAsFixed(2); // Update controller text
     });
   }
 
@@ -170,7 +181,7 @@ class _TimesheetsState extends State<Timesheets> {
                       'Hours': 8,
                     };
                     shifts.add(newShift);
-                    _controllers[shifts.length - 1] = TextEditingController(text: '8');
+                    _hrControllers[shifts.length - 1] = TextEditingController(text: '8');
                   });
                 },
               ),
@@ -201,6 +212,17 @@ class _TimesheetsState extends State<Timesheets> {
                                 child: Text(
                                   textAlign: TextAlign.left,
                                   DateFormat('EE dd/MM').format(selectedDate),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  textAlign: TextAlign.center,
+                                  'Km.',
                                   style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -246,7 +268,6 @@ class _TimesheetsState extends State<Timesheets> {
                                 final shiftIndex = shifts.indexOf(shift);
                                 return GestureDetector(
                                   onTap: () {
-                                    log('shift: $shift' );
                                     Navigator.pushNamed(context, '/shift_details', arguments: shift);
                                   },
                                   child: Card(
@@ -284,11 +305,39 @@ class _TimesheetsState extends State<Timesheets> {
                                             child: Card(
                                               elevation: 0,
                                               child: TextField(
-                                                controller: _controllers[shiftIndex],
+                                                controller: _kmControllers[shiftIndex],
                                                 onChanged: (value) {
                                                   _onHoursChanged(value, shiftIndex);
                                                   setState(() {
-                                                    _controllers[shiftIndex]?.text = value;
+                                                    _kmControllers[shiftIndex]?.text = value;
+                                                  });
+                                                },
+                                                keyboardType: TextInputType.number,
+                                                decoration: InputDecoration(
+                                                  hintText: 'KMs',
+                                                  hintStyle: TextStyle(
+                                                      color: colorScheme.primary),
+                                                  border: const UnderlineInputBorder(
+                                                    borderSide: BorderSide.none,
+                                                  ),
+                                                ),
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                    fontSize: 16,
+                                                    color: colorScheme.primary),
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 1,
+                                            child: Card(
+                                              elevation: 0,
+                                              child: TextField(
+                                                controller: _hrControllers[shiftIndex],
+                                                onChanged: (value) {
+                                                  _onHoursChanged(value, shiftIndex);
+                                                  setState(() {
+                                                    _hrControllers[shiftIndex]?.text = value;
                                                   });
                                                 },
                                                 keyboardType: TextInputType.number,
@@ -403,6 +452,14 @@ class _TimesheetsState extends State<Timesheets> {
                               ),
                             ],
                           ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.info, color: colorScheme.primary.withOpacity(.5)),
+                            const SizedBox(width: 8),
+                            Text('KMs travelled are not included in the total.', style: TextStyle(color: colorScheme.primary.withOpacity(.5))),
+                          ],
                         ),
                         Divider(
                           color: colorScheme.primary,
