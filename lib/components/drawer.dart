@@ -1,22 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:m_worker/home_page.dart';
+import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
-import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/timesheets.dart';
 
 class mDrawer extends StatelessWidget {
-  final String userName;
   final ColorScheme colorScheme;
   final Function onSignOut;
 
   const mDrawer(
-      {super.key,
-      required this.userName,
-      required this.colorScheme,
-      required this.onSignOut});
+      {super.key, required this.colorScheme, required this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +28,7 @@ class mDrawer extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      userName,
+                      'mWorker',
                       style: TextStyle(
                         fontSize: 20,
                         color: colorScheme.primary,
@@ -177,13 +173,6 @@ class mDrawer extends StatelessWidget {
             title: const Text('Compliance'),
             onTap: () {
               Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.link),
-            title: const Text('Switch Company'),
-            onTap: () {
-              Navigator.pushNamed(context, '/settings');
             },
           ),
         ],

@@ -14,13 +14,12 @@ class mShiftTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return _buildShiftCard(context, shiftsForDate, colorScheme);
   }
 
   String calculateShiftDuration(String shiftStart, String shiftEnd) {
     final start =
-    DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftStart, true);
+        DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftStart, true);
     var end = DateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").parse(shiftEnd, true);
 
     if (end.isBefore(start)) {
@@ -36,7 +35,8 @@ class mShiftTile extends StatelessWidget {
         : '$minutes min';
   }
 
-  Widget _buildShiftCard(context, Map<String, dynamic> shift, ColorScheme colorScheme) {
+  Widget _buildShiftCard(
+      context, Map<String, dynamic> shift, ColorScheme colorScheme) {
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, '/shift_details', arguments: shift);
@@ -83,11 +83,11 @@ class mShiftTile extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
                             Card(
-                              color: colorScheme.primaryContainer.withOpacity(0.5),
+                              color:
+                                  colorScheme.primaryContainer.withOpacity(0.5),
                               child: Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: Text(
-
                                   '${DateFormat('hh:mm aa').format(DateTime.parse(shift['ShiftStart']).toLocal())} - ${DateFormat('hh:mm aa').format(DateTime.parse(shift['ShiftEnd']).toLocal())} (${calculateShiftDuration(shift['ShiftStart'], shift['ShiftEnd'])})',
                                   style: TextStyle(
                                       fontSize: 14,

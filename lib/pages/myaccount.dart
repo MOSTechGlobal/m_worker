@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
@@ -143,7 +142,6 @@ class _MyAccountState extends State<MyAccount> {
           log('Progress: $progress');
         },
       );
-
     } catch (e) {
       log('Error uploading document: $e');
     } finally {
@@ -175,12 +173,10 @@ class _MyAccountState extends State<MyAccount> {
       setState(() {
         _pfp = url;
       });
-
     } catch (e) {
       log('Error getting profile picture: $e');
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -205,25 +201,24 @@ class _MyAccountState extends State<MyAccount> {
                       backgroundColor: colorScheme.secondaryContainer,
                       child: _pfp.isNotEmpty
                           ? Image.network(
-                        _pfp, // Use the image data
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Icon(
-                            Icons.person_outlined,
-                            size: 50,
-                            color: colorScheme.primary,
-                          );
-                        },
-                      )
+                              _pfp, // Use the image data
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.person_outlined,
+                                  size: 50,
+                                  color: colorScheme.primary,
+                                );
+                              },
+                            )
                           : Icon(
-                        Icons.person,
-                        size: 50,
-                        color: colorScheme.primary,
-                      ),
+                              Icons.person,
+                              size: 50,
+                              color: colorScheme.primary,
+                            ),
                     ),
-
                     Positioned(
                       bottom: 0,
                       right: 0,
@@ -268,7 +263,9 @@ class _MyAccountState extends State<MyAccount> {
                     child: ListTile(
                       title: Text(
                         'Biometrics',
-                        style: TextStyle(color: colorScheme.onSecondaryContainer, fontSize: 14),
+                        style: TextStyle(
+                            color: colorScheme.onSecondaryContainer,
+                            fontSize: 14),
                       ),
                       trailing: Switch(
                         value: biometricsEnabled,
@@ -278,7 +275,7 @@ class _MyAccountState extends State<MyAccount> {
                             if (value) {
                               _authenticate();
                             } else {
-                              _savePrefs(value,'biometricsEnabled');
+                              _savePrefs(value, 'biometricsEnabled');
                             }
                           });
                         },
@@ -295,7 +292,9 @@ class _MyAccountState extends State<MyAccount> {
                     child: ListTile(
                       title: Text(
                         'Show Weather info.',
-                        style: TextStyle(color: colorScheme.onSecondaryContainer, fontSize: 14),
+                        style: TextStyle(
+                            color: colorScheme.onSecondaryContainer,
+                            fontSize: 14),
                       ),
                       trailing: Switch(
                         value: showWeather,
@@ -315,6 +314,32 @@ class _MyAccountState extends State<MyAccount> {
                   style: TextStyle(
                     fontSize: 14,
                     color: colorScheme.primary.withOpacity(0.5),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: MediaQuery.of(context).size.width * 0.2),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    splashColor: colorScheme.primary.withOpacity(0.1),
+                    leading: Icon(Icons.link, color: colorScheme.primary),
+                    title: Text(
+                      'Switch Company',
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: 16,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    onTap: () async {
+                      final prefs = await SharedPreferences.getInstance();
+                      prefs.clear();
+                      Navigator.pushNamedAndRemoveUntil(
+                          context, '/home', (route) => false);
+                    },
                   ),
                 ),
               ],
@@ -357,7 +382,12 @@ class _MyAccountState extends State<MyAccount> {
                     ],
                   ),
                   image0 != null
-                      ? Image.file(File(image0!.path), width: 100, height: 100, scale: 0.5,)
+                      ? Image.file(
+                          File(image0!.path),
+                          width: 100,
+                          height: 100,
+                          scale: 0.5,
+                        )
                       : const SizedBox.shrink(),
                   const SizedBox(height: 20),
                   Text(
@@ -372,7 +402,8 @@ class _MyAccountState extends State<MyAccount> {
                     label: 'Take a photo',
                     onPressed: () async {
                       final ImagePicker picker = ImagePicker();
-                      final XFile? image = await picker.pickImage(source: ImageSource.camera);
+                      final XFile? image =
+                          await picker.pickImage(source: ImageSource.camera);
                       if (image != null) {
                         setState(() {
                           image0 = image;
@@ -386,7 +417,8 @@ class _MyAccountState extends State<MyAccount> {
                     label: 'Choose from gallery',
                     onPressed: () async {
                       final ImagePicker picker = ImagePicker();
-                      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+                      final XFile? image =
+                          await picker.pickImage(source: ImageSource.gallery);
                       if (image != null) {
                         setState(() {
                           image0 = image;

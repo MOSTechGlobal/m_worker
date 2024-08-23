@@ -4,10 +4,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../bloc/theme_bloc.dart';
 
 class TimesheetRemarks extends StatelessWidget {
-  const TimesheetRemarks({super.key});
+  final Function(String) onRemarksSaved;
+  const TimesheetRemarks({super.key, required this.onRemarksSaved});
 
   @override
   Widget build(BuildContext context) {
+    String remarks = '';
     return BlocBuilder<ThemeBloc, ThemeMode>(
       builder: (context, state) {
         final colorScheme = Theme.of(context).colorScheme;
@@ -58,7 +60,9 @@ class TimesheetRemarks extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          onRemarksSaved(remarks);
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: colorScheme.primary,
                           foregroundColor: colorScheme.onPrimary,

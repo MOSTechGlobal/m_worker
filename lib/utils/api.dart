@@ -1,156 +1,99 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'api_errors/refresh_token_error_dialog.dart';
+
 class Api {
-  static const String baseUrl = 'http://192.168.0.110:5000'; //'http://192.168.0.110:5000'; ////https://moscare-api-master.vercel.app
+  static const String baseUrl = 'http://192.168.0.110:5001';
+  static bool _isRefreshing = false; // Flag to track token refresh attempts
 
   static Future<String?> _refreshToken() async {
+    if (_isRefreshing) {
+      return null; // Prevent multiple simultaneous refresh attempts
+    }
+    _isRefreshing = true;
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final email = prefs.getString('email');
       final password = prefs.getString('password');
-      final credentials = await FirebaseAuth.instance.signInWithEmailAndPassword(email: email!, password: password!);
-      String? bearer = await credentials.user!.getIdToken();
-      await prefs.setString('bearer', bearer!);
+      if (email != null && password != null) {
+        final credentials = await FirebaseAuth.instance
+            .signInWithEmailAndPassword(email: email, password: password);
+        String? bearer = await credentials.user!.getIdToken();
+        await prefs.setString('bearer', bearer!);
+        _isRefreshing = false; // Reset the flag after successful refresh
+        return bearer;
+      }
     } catch (e) {
       log('Error refreshing token: $e');
+      _isRefreshing = false; // Reset the flag even if there's an error
+      showTokenRefreshErrorDialog(); // Show the error dialog
     }
-    return null; // Return null to indicate refresh failure
+    _isRefreshing = false; // Ensure the flag is reset before exiting
+    return null;
   }
 
-  // GET request method
+  static Future<dynamic> _makeRequest(String method, String endpoint,
+      {Map<String, dynamic>? data}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final bearerToken = 'Bearer ${prefs.getString("bearer")}';
+    final uri = Uri.parse('$baseUrl/api/$endpoint');
+    final headers = {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Authorization': bearerToken,
+    };
+
+    http.Response response;
+    try {
+      if (method == 'GET') {
+        response = await http.get(uri, headers: headers);
+      } else if (method == 'POST') {
+        response =
+            await http.post(uri, headers: headers, body: jsonEncode(data));
+      } else if (method == 'PUT') {
+        response =
+            await http.put(uri, headers: headers, body: jsonEncode(data));
+      } else if (method == 'DELETE') {
+        response =
+            await http.delete(uri, headers: headers, body: jsonEncode(data));
+      } else {
+        throw UnsupportedError('Unsupported HTTP method: $method');
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      } else if (response.statusCode == 403 && !_isRefreshing) {
+        // Attempt to refresh token if not already refreshing
+        await _refreshToken();
+        // Retry the request after token refresh
+        return await _makeRequest(method, endpoint, data: data);
+      } else {
+        log('Error ($method): ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      log('Error ($method): $e');
+    }
+    return null;
+  }
+
   static Future get(String endpoint, [Map<String, String>? queryParams]) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bearerToken = 'Bearer ${prefs.getString("bearer")}';
-
-      final uri = Uri.parse('$baseUrl/api/$endpoint').replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=UTF-8', 'Authorization': bearerToken},
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else if (response.statusCode == 403) {
-        // Attempt to refresh the Firebase token
-        await _refreshToken();
-        // Retry the request
-        return await get(endpoint, queryParams);
-      } else {
-        log('Error: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      log('Error: $e');
-    }
-    return null;
+    return await _makeRequest('GET', endpoint, data: queryParams);
   }
 
-  // POST request method
   static Future post(String endpoint, Map<String, dynamic> data) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bearerToken = 'Bearer ${prefs.getString("bearer")}';
-
-      final uri = Uri.parse('$baseUrl/api/$endpoint');
-
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': bearerToken,
-        },
-        body: jsonEncode(data),  // Encode the data as JSON
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) { // Successful POST responses might have 201 Created
-        return json.decode(response.body);
-      } else if (response.statusCode == 403) {
-        // Attempt to refresh token
-        await _refreshToken();
-        // Retry the POST request
-        return await post(endpoint, data);
-      } else {
-        log('Error (POST): ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      log('Error (POST): $e');
-    }
-    return null;
+    return await _makeRequest('POST', endpoint, data: data);
   }
 
-  // PUT request method
   static Future put(String endpoint, Map<String, dynamic> data) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bearerToken = 'Bearer ${prefs.getString("bearer")}';
-
-      final uri = Uri.parse('$baseUrl/api/$endpoint');
-
-      final response = await http.put(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': bearerToken,
-        },
-        body: jsonEncode(data),  // Encode the data as JSON
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else if (response.statusCode == 403) {
-        // Attempt to refresh token
-        await _refreshToken();
-        // Retry the PUT request
-        return await put(endpoint, data);
-      } else {
-        log('Error (PUT): ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      log('Error (PUT): $e');
-    }
-    return null;
+    return await _makeRequest('PUT', endpoint, data: data);
   }
 
-  // DELETE request method
   static Future delete(String endpoint, [Map<String, dynamic>? data]) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bearerToken = 'Bearer ${prefs.getString("bearer")}';
-
-      final uri = Uri.parse('$baseUrl/api/$endpoint');
-
-      final response = await http.delete(
-        uri,
-        headers: {
-          'Content-Type': 'application/json; charset=UTF-8',
-          'Authorization': bearerToken,
-        },
-        // Encode the data as JSON if it exists
-        body: data != null ? jsonEncode(data) : null,
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else if (response.statusCode == 403) {
-        // Attempt to refresh token
-        await _refreshToken();
-        // Retry the DELETE request
-        return await delete(endpoint, data);
-      } else {
-        log('Error (DELETE): ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      log('Error (DELETE): $e');
-    }
-    return null;
+    return await _makeRequest('DELETE', endpoint, data: data);
   }
-
-// Add other HTTP methods (post, put, delete) as needed...
-
 }

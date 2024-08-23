@@ -81,11 +81,11 @@ class _HomePageState extends State<HomePage> {
       prefs = await SharedPreferences.getInstance();
       prefs!.setString('workerID', _worker['WorkerID'].toString());
       final workerShifts =
-          await Api.get('getShiftMainDataByWorkerID/${_worker['WorkerID']}');
+          await Api.get('getApprovedShiftsByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();
       if (fcmToken != null) {
         try {
-          await Api.post('upsertFCMToken', {
+          await Api.post('upsertWorkerFCMToken', {
             'WorkerID': _worker['WorkerID'],
             'FCMToken': fcmToken,
           });
@@ -105,9 +105,11 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       log('Error fetching worker shifts: $e');
     } finally {
-      setState(() {
-        isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -175,7 +177,6 @@ class _HomePageState extends State<HomePage> {
               drawerIconColor: colorScheme.secondary,
             ),
             slider: mDrawer(
-              userName: _worker['FirstName'] ?? 'Worker',
               colorScheme: colorScheme,
               onSignOut: () => _signOut(colorScheme),
             ),
@@ -233,9 +234,11 @@ class _HomePageState extends State<HomePage> {
                             ButtonSegment(
                                 value: 'Today',
                                 label: Text('Today',
-                                    style: TextStyle(fontSize: 16))),
+                                    style: TextStyle(fontSize: 14))),
                             ButtonSegment(
-                                value: 'Fortnight', label: Text('Fortnight')),
+                                value: 'Fortnight',
+                                label: Text('Fortnight',
+                                    style: TextStyle(fontSize: 14))),
                           ],
                           selected: _selectedSegment,
                           onSelectionChanged: (Set<String> newSelection) {

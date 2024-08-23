@@ -18,8 +18,7 @@ class ShiftRoot extends StatefulWidget {
   State<ShiftRoot> createState() => _ShiftRootState();
 }
 
-class _ShiftRootState extends State<ShiftRoot>
-    with SingleTickerProviderStateMixin {
+class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   Map<String, dynamic> shiftData = {};
   List<dynamic> clientmWorkerData = [];
   late int _bottomNavIndex = 0;
@@ -148,54 +147,164 @@ class _ShiftRootState extends State<ShiftRoot>
             ),
           ),
           bottomNavigationBar: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: NavigationBar(
-              animationDuration: const Duration(milliseconds: 300),
-              selectedIndex: _bottomNavIndex,
-              indicatorColor: Colors.transparent,
-              surfaceTintColor: colorScheme.surface,
-              onDestinationSelected: (index) {
-                setState(() {
-                  _bottomNavIndex = index;
-                });
-                if (index == 0) {
-                  // Handle Incident button
-                } else if (index == 1) {
-                  showShiftAddNotePhoto(context, shiftData['ClientID']);
-                } else if (index == 2) {
-                  showShiftProfileDialog(context,
-                      clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {});
-                } else if (index == 3) {
-                  showTimesheetRemarksDialog(context);
-                } else if (index == 4) {
-                  _showMoreOptions(context, colorScheme);
-                }
-              },
-              destinations: [
-                const NavigationDestination(
-                  icon: Icon(Icons.info_outlined),
-                  label: 'Incident',
+            padding: const EdgeInsets.symmetric(horizontal: 0.0),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: colorScheme.primary,
+                    width: 1,
+                  ),
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.upload_file_rounded),
-                  label: 'Add Note/Photo',
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
                 ),
-                NavigationDestination(
-                  icon: hasProfile
-                      ? const BadgeIcon(icon: Icons.person_pin, badgeCount: -1)
-                      : const Icon(Icons.person_pin),
-                  label: 'Profile',
-                ),
-                NavigationDestination(
-                  enabled: shiftData['ShiftStatus'] != 'Not Started',
-                  icon: const Icon(Icons.more_time),
-                  label: 'Timesheet Remarks',
-                ),
-                const NavigationDestination(
-                  icon: Icon(Icons.more),
-                  label: 'More',
-                ),
-              ],
+                color: colorScheme.secondary,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.info_outlined,
+                            color: colorScheme.onSecondary),
+                        onPressed: () {
+                          setState(() {
+                            _bottomNavIndex = 0;
+                          });
+                          // Handle Incident button
+                        },
+                      ),
+                      Text('Incident',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                          )),
+                    ],
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.upload_file_rounded,
+                            color: colorScheme.onSecondary),
+                        onPressed: () {
+                          setState(() {
+                            _bottomNavIndex = 1;
+                          });
+                          showShiftAddNotePhoto(context, shiftData['ClientID']);
+                        },
+                      ),
+                      Text('Add Note',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                          )),
+                    ],
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: hasProfile
+                            ? BadgeIcon(
+                                icon: Icons.person_pin,
+                                badgeCount: -1,
+                                iconColor: colorScheme.onSecondary)
+                            : Icon(Icons.person_pin,
+                                color: colorScheme.onSecondary),
+                        onPressed: () {
+                          setState(() {
+                            _bottomNavIndex = 2;
+                          });
+                          showShiftProfileDialog(
+                              context,
+                              clientmWorkerData.isNotEmpty
+                                  ? clientmWorkerData[0]
+                                  : {});
+                        },
+                      ),
+                      Text('Profile',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                          )),
+                    ],
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.more_time,
+                            color: colorScheme.onSecondary),
+                        onPressed: () {
+                          setState(() {
+                            _bottomNavIndex = 3;
+                          });
+                          if (shiftData['ShiftStatus'] != 'Not Started') {
+                            showTimesheetRemarksDialog(
+                                context, _handleTimesheetRemarks);
+                          } else {
+                            showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    backgroundColor:
+                                        Theme.of(context).colorScheme.surface,
+                                    content: Text('\nShift has not started yet',
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            fontSize: 20)),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Text('Close',
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error)),
+                                      ),
+                                    ],
+                                  );
+                                });
+                          }
+                        },
+                      ),
+                      Text('TS Remarks',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                          )),
+                    ],
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.more, color: colorScheme.onSecondary),
+                        onPressed: () {
+                          setState(() {
+                            _bottomNavIndex = 4;
+                          });
+                          _showMoreOptions(context, colorScheme);
+                        },
+                      ),
+                      Text('More',
+                          style: TextStyle(
+                            color: colorScheme.onSecondary,
+                          )),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           body: TabBarView(
@@ -215,6 +324,13 @@ class _ShiftRootState extends State<ShiftRoot>
         );
       },
     );
+  }
+
+  void _handleTimesheetRemarks(String remarks) {
+    setState(() {
+      shiftData['TSRemarks'] =
+          remarks; // Update the shift data with new remarks
+    });
   }
 
   void _showMoreOptions(BuildContext context, ColorScheme colorScheme) {
@@ -283,12 +399,13 @@ void showShiftAddNotePhoto(BuildContext context, clientID) {
   );
 }
 
-void showTimesheetRemarksDialog(BuildContext context) {
+void showTimesheetRemarksDialog(
+    BuildContext context, Function(String) onRemarksSaved) {
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     builder: (context) {
-      return const TimesheetRemarks();
+      return TimesheetRemarks(onRemarksSaved: onRemarksSaved);
     },
     showDragHandle: true,
     enableDrag: true,

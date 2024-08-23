@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:m_worker/components/timesheet/calendar_view.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../bloc/theme_bloc.dart';
 
 class Timesheets extends StatefulWidget {
@@ -98,18 +99,27 @@ class _TimesheetsState extends State<Timesheets> {
   // Calculate total pay for the week
   double get weeklyTotal {
     return weeklyShifts.fold<double>(
-        0, (sum, shift) => sum + ((shift['Hours'] ?? calculateShiftHours(shift)) * (shift['PayRate'] ?? 0)));
+        0,
+        (sum, shift) =>
+            sum +
+            ((shift['Hours'] ?? calculateShiftHours(shift)) *
+                (shift['PayRate'] ?? 0)));
   }
 
   double get dailyTotal {
     return filteredShifts.fold<double>(
-        0, (sum, shift) => sum + ((shift['Hours'] ?? calculateShiftHours(shift)) * (shift['PayRate'] ?? 0)));
+        0,
+        (sum, shift) =>
+            sum +
+            ((shift['Hours'] ?? calculateShiftHours(shift)) *
+                (shift['PayRate'] ?? 0)));
   }
 
   // Get shifts for the selected date
   List<Map<String, dynamic>> get filteredShifts {
     return shifts
-        .where((shift) => isSameDay(DateTime.parse(shift['ShiftStart']), selectedDate))
+        .where((shift) =>
+            isSameDay(DateTime.parse(shift['ShiftStart']), selectedDate))
         .toList();
   }
 
@@ -117,13 +127,11 @@ class _TimesheetsState extends State<Timesheets> {
   List<Map<String, dynamic>> get weeklyShifts {
     final weekStart = getWeekStart(selectedDate);
     final weekEnd = weekStart.add(const Duration(days: 6)); // End of the week
-    return shifts
-        .where((shift) {
+    return shifts.where((shift) {
       final shiftDate = DateTime.parse(shift['ShiftStart']);
       return shiftDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
           shiftDate.isBefore(weekEnd.add(const Duration(days: 1)));
-    })
-        .toList();
+    }).toList();
   }
 
   // Helper function to check if two dates are the same day
@@ -151,7 +159,8 @@ class _TimesheetsState extends State<Timesheets> {
     final hours = double.tryParse(value) ?? 0;
     setState(() {
       shifts[index]['Hours'] = hours;
-      _hrControllers[index]?.text = hours.toStringAsFixed(2); // Update controller text
+      _hrControllers[index]?.text =
+          hours.toStringAsFixed(2); // Update controller text
     });
   }
 
@@ -174,14 +183,17 @@ class _TimesheetsState extends State<Timesheets> {
                   setState(() {
                     final newShift = {
                       'ShiftStart': DateTime.now().toIso8601String(),
-                      'ShiftEnd': DateTime.now().add(const Duration(hours: 8)).toIso8601String(),
+                      'ShiftEnd': DateTime.now()
+                          .add(const Duration(hours: 8))
+                          .toIso8601String(),
                       'ClientFirstName': 'New',
                       'ClientLastName': 'Client',
                       'PayRate': 25.0,
                       'Hours': 8,
                     };
                     shifts.add(newShift);
-                    _hrControllers[shifts.length - 1] = TextEditingController(text: '8');
+                    _hrControllers[shifts.length - 1] =
+                        TextEditingController(text: '8');
                   });
                 },
               ),
@@ -240,17 +252,6 @@ class _TimesheetsState extends State<Timesheets> {
                                       color: colorScheme.primary),
                                 ),
                               ),
-                              Expanded(
-                                flex: 2,
-                                child: Text(
-                                  textAlign: TextAlign.right,
-                                  'Pay Rate',
-                                  style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary),
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -259,125 +260,150 @@ class _TimesheetsState extends State<Timesheets> {
                           height: MediaQuery.of(context).size.height * 0.3,
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
-                            child: _isLoading ?
-                                const Center(child: CircularProgressIndicator()) :
-                            ListView.builder(
-                              itemCount: filteredShifts.length,
-                              itemBuilder: (context, index) {
-                                final shift = filteredShifts[index];
-                                final shiftIndex = shifts.indexOf(shift);
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.pushNamed(context, '/shift_details', arguments: shift);
-                                  },
-                                  child: Card(
-                                    color: colorScheme.tertiaryContainer,
-                                    margin: const EdgeInsets.all(8),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(8.0),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: <Widget>[
-                                          Expanded(
-                                            flex: 2,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: _isLoading
+                                ? const Center(
+                                    child: CircularProgressIndicator())
+                                : ListView.builder(
+                                    itemCount: filteredShifts.length,
+                                    itemBuilder: (context, index) {
+                                      final shift = filteredShifts[index];
+                                      final shiftIndex = shifts.indexOf(shift);
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.pushNamed(
+                                              context, '/shift_details',
+                                              arguments: shift);
+                                        },
+                                        child: Card(
+                                          color: colorScheme.tertiaryContainer,
+                                          margin: const EdgeInsets.all(8),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
                                               children: <Widget>[
-                                                Text(
-                                                  textAlign: TextAlign.left,
-                                                  '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']))} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']))}',
-                                                  style: TextStyle(
-                                                      fontSize: 16,
-                                                      color: colorScheme.primary),
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: <Widget>[
+                                                      Text(
+                                                        textAlign:
+                                                            TextAlign.left,
+                                                        '${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftStart']))} - ${DateFormat('HH:mm').format(DateTime.parse(shift['ShiftEnd']))}',
+                                                        style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: colorScheme
+                                                                .primary),
+                                                      ),
+                                                      Text(
+                                                        textAlign:
+                                                            TextAlign.left,
+                                                        '${shift['ClientFirstName']} ${shift['ClientLastName']}',
+                                                        style: TextStyle(
+                                                            fontSize: 16,
+                                                            color: colorScheme
+                                                                .primary),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                Text(
-                                                  textAlign: TextAlign.left,
-                                                  '${shift['ClientFirstName']} ${shift['ClientLastName']}',
-                                                  style: TextStyle(
-                                                      fontSize: 16,
-                                                      color: colorScheme.primary),
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: Card(
+                                                    elevation: 0,
+                                                    child: TextField(
+                                                      controller:
+                                                          _kmControllers[
+                                                              shiftIndex],
+                                                      onChanged: (value) {
+                                                        _onHoursChanged(
+                                                            value, shiftIndex);
+                                                        setState(() {
+                                                          _kmControllers[
+                                                                  shiftIndex]
+                                                              ?.text = value;
+                                                        });
+                                                      },
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      decoration:
+                                                          InputDecoration(
+                                                        hintText: 'KMs',
+                                                        hintStyle: TextStyle(
+                                                            color: colorScheme
+                                                                .primary),
+                                                        border:
+                                                            const UnderlineInputBorder(
+                                                          borderSide:
+                                                              BorderSide.none,
+                                                        ),
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          color: colorScheme
+                                                              .primary),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: Card(
+                                                    elevation: 0,
+                                                    child: TextField(
+                                                      controller:
+                                                          _hrControllers[
+                                                              shiftIndex],
+                                                      onChanged: (value) {
+                                                        _onHoursChanged(
+                                                            value, shiftIndex);
+                                                        setState(() {
+                                                          _hrControllers[
+                                                                  shiftIndex]
+                                                              ?.text = value;
+                                                        });
+                                                      },
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      decoration:
+                                                          InputDecoration(
+                                                        hintText: 'Hours',
+                                                        hintStyle: TextStyle(
+                                                            color: colorScheme
+                                                                .primary),
+                                                        border:
+                                                            const UnderlineInputBorder(
+                                                          borderSide:
+                                                              BorderSide.none,
+                                                        ),
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: TextStyle(
+                                                          fontSize: 16,
+                                                          color: colorScheme
+                                                              .primary),
+                                                    ),
+                                                  ),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                          Expanded(
-                                            flex: 1,
-                                            child: Card(
-                                              elevation: 0,
-                                              child: TextField(
-                                                controller: _kmControllers[shiftIndex],
-                                                onChanged: (value) {
-                                                  _onHoursChanged(value, shiftIndex);
-                                                  setState(() {
-                                                    _kmControllers[shiftIndex]?.text = value;
-                                                  });
-                                                },
-                                                keyboardType: TextInputType.number,
-                                                decoration: InputDecoration(
-                                                  hintText: 'KMs',
-                                                  hintStyle: TextStyle(
-                                                      color: colorScheme.primary),
-                                                  border: const UnderlineInputBorder(
-                                                    borderSide: BorderSide.none,
-                                                  ),
-                                                ),
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    color: colorScheme.primary),
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 1,
-                                            child: Card(
-                                              elevation: 0,
-                                              child: TextField(
-                                                controller: _hrControllers[shiftIndex],
-                                                onChanged: (value) {
-                                                  _onHoursChanged(value, shiftIndex);
-                                                  setState(() {
-                                                    _hrControllers[shiftIndex]?.text = value;
-                                                  });
-                                                },
-                                                keyboardType: TextInputType.number,
-                                                decoration: InputDecoration(
-                                                  hintText: 'Hours',
-                                                  hintStyle: TextStyle(
-                                                      color: colorScheme.primary),
-                                                  border: const UnderlineInputBorder(
-                                                    borderSide: BorderSide.none,
-                                                  ),
-                                                ),
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                    fontSize: 16,
-                                                    color: colorScheme.primary),
-                                              ),
-                                            ),
-                                          ),
-                                          Expanded(
-                                            flex: 2,
-                                            child: Text(
-                                              textAlign: TextAlign.right,
-                                              '\$${(shift['PayRate'] ?? 0).toStringAsFixed(2)} /hr',
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: colorScheme.primary),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                );
-                              },
-                            ),
                           ),
                         ),
                         // Show daily total
                         Card(
-                          color: colorScheme.secondaryContainer.withOpacity(0.8),
+                          color:
+                              colorScheme.secondaryContainer.withOpacity(0.8),
                           elevation: 0,
                           margin: const EdgeInsets.all(8),
                           child: Row(
@@ -456,9 +482,13 @@ class _TimesheetsState extends State<Timesheets> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.info, color: colorScheme.primary.withOpacity(.5)),
+                            Icon(Icons.info,
+                                color: colorScheme.primary.withOpacity(.5)),
                             const SizedBox(width: 8),
-                            Text('KMs travelled are not included in the total.', style: TextStyle(color: colorScheme.primary.withOpacity(.5))),
+                            Text('KMs travelled are not included in the total.',
+                                style: TextStyle(
+                                    color:
+                                        colorScheme.primary.withOpacity(.5))),
                           ],
                         ),
                         Divider(

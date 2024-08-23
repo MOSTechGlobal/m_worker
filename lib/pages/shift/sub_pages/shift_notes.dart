@@ -1,9 +1,6 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import 'package:m_worker/utils/api.dart';
 
 import '../../../bloc/theme_bloc.dart';
 
@@ -49,27 +46,29 @@ class ShiftNotes extends StatelessWidget {
                                     color: colorScheme.primary)),
                             const SizedBox(height: 8),
                             Text(
-                              shift["MakerUser"],
+                              shift["MakerUser"] ?? '',
                               style: TextStyle(
                                 color: colorScheme.secondary,
                                 fontSize: 12,
                               ),
                             ),
-                            Text(
-                              DateFormat('yyyy-MM-dd')
-                                  .format(DateTime.parse(shift["MakerDate"])),
-                              style: TextStyle(
-                                color: colorScheme.secondary,
-                                fontSize: 12,
-                              ),
-                            ),
+                            shift["MakerDate"] != null
+                                ? Text(
+                                    DateFormat('dd/MM/yyyy hh:mm a').format(
+                                        DateTime.parse(shift["MakerDate"])),
+                                    style: TextStyle(
+                                      color: colorScheme.secondary,
+                                      fontSize: 12,
+                                    ),
+                                  )
+                                : const SizedBox(),
                           ],
                         ),
                       ),
                     ),
                   ),
-            clientmWorkerData["ShiftAlert"] != null ?
-                Card(
+            clientmWorkerData["ShiftAlert"] != null
+                ? Card(
                     color: colorScheme.primaryContainer,
                     margin:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
