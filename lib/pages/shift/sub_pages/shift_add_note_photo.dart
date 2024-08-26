@@ -180,6 +180,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
                     segments: [
                       ButtonSegment(
                         value: 0,
+                        icon:
+                            Icon(Icons.upload_file, color: colorScheme.primary),
                         label: Text(
                           'Upload Image',
                           style: TextStyle(
@@ -188,6 +190,8 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
                       ),
                       ButtonSegment(
                         value: 1,
+                        icon:
+                            Icon(Icons.camera_alt, color: colorScheme.primary),
                         label: Text(
                           'Take Photo',
                           style: TextStyle(

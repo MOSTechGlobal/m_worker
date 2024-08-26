@@ -61,7 +61,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     _fetchWorkerData();
     _fetchShiftData(shift['ShiftID']);
     _initAlarm();
-    log(shift['TSRemarks'] ?? '');
     _checkExtensionBtn();
     _fetchExtensionRequestStatus();
     player.setReleaseMode(ReleaseMode.stop);
@@ -164,7 +163,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     setAlarm(breakEndTime!);
   }
 
-  void endBreak() async {
+  Future<void> endBreak() async {
     setState(() {
       isBreakActive = false;
       breakDuration = Duration.zero;
@@ -248,8 +247,11 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final workerID = prefs.getString('workerID').toString();
+
       log('Fetching worker data for WorkerID: $workerID');
+
       final response = await Api.get('getWorkerDataForVW/$workerID');
+
       if (response['data'] != null && response['data'].isNotEmpty) {
         log('Worker data fetched successfully: ${response['data'][0]}');
         setState(() {
@@ -339,10 +341,11 @@ class _ShiftDetailsState extends State<ShiftDetails> {
       'RmId': clientData['CaseManager2'],
       'RmRemarks': null,
       'RmStatus': 'P',
-      'WorkerRemarks': shift['TSRemarks'],
-      'ShiftStartDate': DateTime.parse(shift['ShiftStart']).toLocal(),
-      'ShiftEndDate': DateTime.parse(shift['ShiftEnd']).toLocal(),
-      'ShiftHrs': shiftHrs,
+      'WorkerRemarks': null,
+      'ShiftStartDate':
+          DateTime.parse(shift['ShiftStart']).toLocal().toString(),
+      'ShiftEndDate': DateTime.parse(shift['ShiftEnd']).toLocal().toString(),
+      'ActualStartTime': DateTime.now().toLocal().toString(),
       'PayRate': shift['PayRate'],
       'ChargeRate': shift['ChargeRate'],
       'RecStatus': 'O',
@@ -566,12 +569,14 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (showExtensionBtn) const SizedBox(width: 60),
-                    if (shift['ShiftStatus'] == 'In Progress')
+                    if (shift['ShiftStatus'] == 'In Progress' &&
+                        DateTime.now()
+                            .isAfter(DateTime.parse(shift['ShiftEnd'])))
                       SizedBox(
                         width: 150,
                         child: ElevatedButton(
                           onPressed: () async {
-                            showEndShiftDialog(context, shift, colorScheme);
+                            showEndShiftDialog(context, colorScheme);
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: colorScheme.errorContainer,
@@ -873,8 +878,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     );
   }
 
-  void showEndShiftDialog(
-      BuildContext context, Map<dynamic, dynamic> shiftData, colorScheme) {
+  void showEndShiftDialog(BuildContext context, colorScheme) {
     showDialog(
       context: context,
       builder: (context) {
@@ -891,8 +895,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             ),
             ElevatedButton(
               onPressed: () {
+                final args = {
+                  'shift': shift,
+                  'worker': workerData,
+                };
                 Navigator.of(context).pop();
-                _changeShiftStatus('end', shiftData['ShiftID']);
+                Navigator.of(context).pushNamed('/end_shift', arguments: args);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.errorContainer,
@@ -906,11 +914,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     );
   }
 
-  void showExtendRequestDialog(
-      BuildContext context,
-      Map<dynamic, dynamic> shiftData,
-      Map<dynamic, dynamic> workerData,
-      ColorScheme colorScheme) {
+  void showExtendRequestDialog(BuildContext context, Map shiftData,
+      Map workerData, ColorScheme colorScheme) {
     showDialog(
       context: context,
       builder: (context) {

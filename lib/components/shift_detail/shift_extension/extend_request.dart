@@ -75,7 +75,7 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
 
       setState(() {
         objectLocation =
-            '$company/worker/${widget.workerData['WorkerID']}/shift_extension/sid_${widget.shiftData['ShiftID']}/${image0?.path.split('/').last ?? doc.split('/').last}';
+            '$company/worker/${widget.workerData['WorkerID']}/shift_extension/sid_${widget.shiftData['ShiftID']}/start_${image0?.path.split('/').last ?? doc.split('/').last}';
       });
 
       final s3Storage = S3Storage(
@@ -247,6 +247,8 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
               segments: [
                 ButtonSegment(
                   value: 0,
+                  icon: Icon(Icons.upload_file,
+                      color: widget.colorScheme.primary),
                   label: Text(
                     'Upload File',
                     style: TextStyle(
@@ -255,6 +257,8 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
                 ),
                 ButtonSegment(
                   value: 1,
+                  icon:
+                      Icon(Icons.camera_alt, color: widget.colorScheme.primary),
                   label: Text(
                     'Take Photo',
                     style: TextStyle(

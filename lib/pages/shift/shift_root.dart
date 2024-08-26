@@ -8,7 +8,6 @@ import 'package:m_worker/pages/shift/sub_pages/shift_add_note_photo.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_notes.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_profile.dart';
-import 'package:m_worker/pages/shift/sub_pages/timesheet_remarks.dart';
 import 'package:m_worker/utils/api.dart';
 
 class ShiftRoot extends StatefulWidget {
@@ -108,7 +107,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text(
-                  'ID: ${shiftData['ShiftID']}',
+                  '#${shiftData['ShiftID']}',
                   style: TextStyle(
                     color: colorScheme.tertiary,
                     fontSize: 14,
@@ -245,37 +244,6 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                           setState(() {
                             _bottomNavIndex = 3;
                           });
-                          if (shiftData['ShiftStatus'] != 'Not Started') {
-                            showTimesheetRemarksDialog(
-                                context, _handleTimesheetRemarks);
-                          } else {
-                            showDialog(
-                                context: context,
-                                builder: (context) {
-                                  return AlertDialog(
-                                    backgroundColor:
-                                        Theme.of(context).colorScheme.surface,
-                                    content: Text('\nShift has not started yet',
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            fontSize: 20)),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        child: Text('Close',
-                                            style: TextStyle(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error)),
-                                      ),
-                                    ],
-                                  );
-                                });
-                          }
                         },
                       ),
                       Text('TS Remarks',
@@ -324,13 +292,6 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
         );
       },
     );
-  }
-
-  void _handleTimesheetRemarks(String remarks) {
-    setState(() {
-      shiftData['TSRemarks'] =
-          remarks; // Update the shift data with new remarks
-    });
   }
 
   void _showMoreOptions(BuildContext context, ColorScheme colorScheme) {
@@ -396,18 +357,5 @@ void showShiftAddNotePhoto(BuildContext context, clientID) {
     builder: (context) {
       return ShiftAddNotePhoto(clientID: clientID);
     },
-  );
-}
-
-void showTimesheetRemarksDialog(
-    BuildContext context, Function(String) onRemarksSaved) {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) {
-      return TimesheetRemarks(onRemarksSaved: onRemarksSaved);
-    },
-    showDragHandle: true,
-    enableDrag: true,
   );
 }

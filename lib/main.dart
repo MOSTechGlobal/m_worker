@@ -12,6 +12,7 @@ import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/shift/shift_root.dart';
+import 'package:m_worker/pages/shift/sub_pages/more/end_shift.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
 import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
@@ -88,6 +89,7 @@ class MyApp extends StatelessWidget {
               '/availability': (context) => const Availability(),
               '/id_card': (context) => const IdCard(),
               '/timesheets': (context) => const Timesheets(),
+              '/end_shift': (context) => const EndShift(),
             },
             debugShowCheckedModeBanner: false,
             theme: lightTheme,
