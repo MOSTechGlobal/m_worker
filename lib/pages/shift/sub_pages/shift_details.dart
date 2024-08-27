@@ -137,9 +137,9 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     super.dispose();
   }
 
-  Future<void> _playSuccessSound() async {
+  void _playSuccessSound() {
     try {
-      await player.play(AssetSource('audio/approve.mp3'));
+      player.play(AssetSource('audio/approve.mp3'));
     } catch (e) {
       log('Error playing sound: $e');
     } finally {
@@ -327,8 +327,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     final prefs = await SharedPreferences.getInstance();
 
     final workerID = prefs.getString('workerID').toString();
-    final shiftHrs =
-        calculateShiftDurationHours(shift['ShiftStart'], shift['ShiftEnd']);
 
     final data = {
       'ShiftId': shift['ShiftID'],
@@ -513,7 +511,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                               : shift['ShiftStatus'] == 'Cancelled'
                                   ? Colors.red
                                   : shift['ShiftStatus'] == 'In Progress'
-                                      ? Colors.amber
+                                      ? Colors.amber.withOpacity(0.5)
                                       : colorScheme.secondaryContainer,
                       margin: const EdgeInsets.symmetric(horizontal: 20),
                       child: Padding(
@@ -570,7 +568,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   children: [
                     if (showExtensionBtn) const SizedBox(width: 60),
                     if (shift['ShiftStatus'] == 'In Progress' &&
-                        DateTime.now()
+                        !DateTime.now()
                             .isAfter(DateTime.parse(shift['ShiftEnd'])))
                       SizedBox(
                         width: 150,

@@ -33,6 +33,8 @@ class _EndShiftState extends State<EndShift> {
   String doc = '';
   double _progressState = 0.0;
 
+  ScaffoldMessengerState? _scaffoldMessengerState;
+
   final TextEditingController _kmNoteController = TextEditingController();
   final TextEditingController _travelNoteController = TextEditingController();
   final TextEditingController _timeSheetRemarksController =
@@ -68,7 +70,13 @@ class _EndShiftState extends State<EndShift> {
     setState(() {
       isLoading = true;
     });
-    shift = ModalRoute.of(context)!.settings.arguments as Map<dynamic, dynamic>;
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<dynamic, dynamic>;
+    setState(() {
+      shift = args['shift'];
+      workerID = args['worker']['WorkerID'];
+    });
+    _scaffoldMessengerState = ScaffoldMessenger.of(context);
     setState(() {
       isLoading = false;
     });
@@ -93,6 +101,7 @@ class _EndShiftState extends State<EndShift> {
   }
 
   // todo if the worker is defaulter then the shift needs to be on and it goes to senior management for not clocking out on time unless the admin extends the shift
+  // todo automatically end the shift if the worker is a defaulter
 
   Future<void> _takePhoto() async {
     final ImagePicker picker = ImagePicker();
@@ -119,14 +128,12 @@ class _EndShiftState extends State<EndShift> {
     setState(() {
       isLoading = true;
     });
-    // todo get the end loc and minutes and attachment
     final location = await Geolocator.getCurrentPosition();
     final endLoc = '(${location.latitude}, ${location.longitude})';
 
     try {
       final prefs = await SharedPreferences.getInstance();
       final company = prefs.getString('company');
-      final email = prefs.getString('email');
       final workerID = prefs.getInt('workerID')!;
       String objectLocation = '';
 
@@ -183,6 +190,12 @@ class _EndShiftState extends State<EndShift> {
           'EndLoc': endLoc,
           'EndAttachment': objectLocation,
         };
+
+        try {
+          await Api.post('updateExtensionEndTime', data);
+        } catch (e) {
+          log('Error ending extension: $e');
+        }
       }
     } catch (e) {
       log('Error ending extension: $e');
@@ -235,7 +248,8 @@ class _EndShiftState extends State<EndShift> {
   }
 
   Future<void> _timesheetDetails() async {
-    final endTime = DateTime.now().toIso8601String();
+    final endTime = // only current time in hh:mm:ss
+        DateTime.now().toIso8601String().substring(11, 19);
     final data = {
       'ShiftId': shift['ShiftID'],
       'Km': _kmNoteController.text,
@@ -245,16 +259,24 @@ class _EndShiftState extends State<EndShift> {
       'ExtendedMinutes': _extendedMinutesController.text,
     };
 
-    await Api.post('endShiftInsertTimesheetDetails', data);
-
-    // show snackbar
-    final snackBar = SnackBar(
-      content: const Text('Shift ended successfully',
-          style: TextStyle(fontSize: 16, color: Colors.white)),
-      duration: const Duration(seconds: 2),
-      backgroundColor: Colors.green.withOpacity(0.8),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    try {
+      await Api.post('endShiftInsertTimesheetDetails', data);
+      if (_scaffoldMessengerState != null) {
+        _scaffoldMessengerState!.showSnackBar(
+          const SnackBar(
+              content: Text('Timesheet details updated successfully',
+                  style: TextStyle(fontSize: 16, color: Colors.white))),
+        );
+      }
+    } catch (e) {
+      if (_scaffoldMessengerState != null) {
+        _scaffoldMessengerState!.showSnackBar(
+          const SnackBar(
+              content: Text('Failed to update timesheet details',
+                  style: TextStyle(fontSize: 16, color: Colors.white))),
+        );
+      }
+    }
 
     Navigator.pop(context);
   }
@@ -278,13 +300,13 @@ class _EndShiftState extends State<EndShift> {
 
       await Api.post('insertClientNotesData/${shift['ClientID']}', data);
     } else {
-      final snackBar = SnackBar(
-        content: const Text('Note cannot be empty',
-            style: TextStyle(fontSize: 16, color: Colors.white)),
-        duration: const Duration(seconds: 2),
-        backgroundColor: Colors.red.withOpacity(0.8),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      if (_scaffoldMessengerState != null) {
+        _scaffoldMessengerState!.showSnackBar(
+          const SnackBar(
+              content: Text('Note cannot be empty',
+                  style: TextStyle(fontSize: 16, color: Colors.white))),
+        );
+      }
     }
   }
 

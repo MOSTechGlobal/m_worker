@@ -20,7 +20,6 @@ class ShiftRoot extends StatefulWidget {
 class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   Map<String, dynamic> shiftData = {};
   List<dynamic> clientmWorkerData = [];
-  late int _bottomNavIndex = 0;
   late TabController _tabController;
   late bool hasAppNote = false;
   late bool hasProfile = false;
@@ -172,9 +171,6 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                         icon: Icon(Icons.info_outlined,
                             color: colorScheme.onSecondary),
                         onPressed: () {
-                          setState(() {
-                            _bottomNavIndex = 0;
-                          });
                           // Handle Incident button
                         },
                       ),
@@ -192,9 +188,6 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                         icon: Icon(Icons.upload_file_rounded,
                             color: colorScheme.onSecondary),
                         onPressed: () {
-                          setState(() {
-                            _bottomNavIndex = 1;
-                          });
                           showShiftAddNotePhoto(context, shiftData['ClientID']);
                         },
                       ),
@@ -217,9 +210,6 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                             : Icon(Icons.person_pin,
                                 color: colorScheme.onSecondary),
                         onPressed: () {
-                          setState(() {
-                            _bottomNavIndex = 2;
-                          });
                           showShiftProfileDialog(
                               context,
                               clientmWorkerData.isNotEmpty
@@ -238,30 +228,8 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.more_time,
-                            color: colorScheme.onSecondary),
-                        onPressed: () {
-                          setState(() {
-                            _bottomNavIndex = 3;
-                          });
-                        },
-                      ),
-                      Text('TS Remarks',
-                          style: TextStyle(
-                            color: colorScheme.onSecondary,
-                          )),
-                    ],
-                  ),
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
                         icon: Icon(Icons.more, color: colorScheme.onSecondary),
                         onPressed: () {
-                          setState(() {
-                            _bottomNavIndex = 4;
-                          });
                           _showMoreOptions(context, colorScheme);
                         },
                       ),
