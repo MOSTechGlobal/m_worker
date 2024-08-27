@@ -82,8 +82,8 @@ class Api {
     return null;
   }
 
-  static Future get(String endpoint, [Map<String, String>? queryParams]) async {
-    return await _makeRequest('GET', endpoint, data: queryParams);
+  static Future get(String endpoint, [Map<String, dynamic>? data]) async {
+    return await _makeRequest('GET', endpoint, data: data);
   }
 
   static Future post(String endpoint, Map<String, dynamic> data) async {

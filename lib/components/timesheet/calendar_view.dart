@@ -54,14 +54,14 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: day.day == _currentDate.day &&
-                    day.month == _currentDate.month &&
-                    day.year == _currentDate.year
+                        day.month == _currentDate.month &&
+                        day.year == _currentDate.year
                     ? widget.colorScheme.primaryContainer
                     : day.day == DateTime.now().day &&
-                    day.month == DateTime.now().month &&
-                    day.year == DateTime.now().year
-                    ? widget.colorScheme.tertiaryContainer.withOpacity(0.5)
-                    : null,
+                            day.month == DateTime.now().month &&
+                            day.year == DateTime.now().year
+                        ? widget.colorScheme.tertiaryContainer.withOpacity(0.5)
+                        : null,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -76,22 +76,12 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                     style: TextStyle(
                       color: widget.colorScheme.primary,
                       fontWeight: day.day == _currentDate.day &&
-                          day.month == _currentDate.month &&
-                          day.year == _currentDate.year
+                              day.month == _currentDate.month &&
+                              day.year == _currentDate.year
                           ? FontWeight.bold
                           : FontWeight.normal,
                     ),
                   ),
-                  if (isToday)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: widget.colorScheme.tertiary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
                 ],
               ),
             ),
