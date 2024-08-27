@@ -21,6 +21,9 @@ class _TimesheetsState extends State<Timesheets> {
   bool _isLoading = false;
   List<Map<String, dynamic>> shifts = [];
 
+  bool isEditMode = false;
+  int? editingShiftIndex;
+
   final Map<int, TextEditingController> _hrControllers = {};
   final Map<int, TextEditingController> _kmControllers = {};
 
@@ -28,6 +31,7 @@ class _TimesheetsState extends State<Timesheets> {
   void initState() {
     super.initState();
     _fetchShifts();
+    _exitEditMode();
   }
 
   @override
@@ -125,6 +129,7 @@ class _TimesheetsState extends State<Timesheets> {
   }
 
   List<Map<String, dynamic>> get filteredShifts {
+    log('selectedDate: $selectedDate');
     return shifts
         .where((shift) =>
             isSameDay(DateTime.parse(shift['ShiftStartDate']), selectedDate))
@@ -168,6 +173,110 @@ class _TimesheetsState extends State<Timesheets> {
     });
   }
 
+  Future<void> _saveShiftData(int shiftIndex) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('email');
+      final updatedBy = email ?? 'Unknown User';
+      final updateTime = DateTime.now().toIso8601String();
+
+      final shift = shifts[shiftIndex];
+      final data = {
+        "TsId": shift['TsId'],
+        "ShiftId": shift['ShiftId'],
+        "ShiftHrs": _hrControllers[shiftIndex]?.text ?? '0',
+        "Km": _kmControllers[shiftIndex]?.text ?? '0',
+        "UpdateBy": updatedBy,
+        "UpdateTime": updateTime,
+      };
+
+      log('Saving shift data: $data');
+
+      final res = await Api.put('saveTimesheetDetailsWorkerSide', data);
+
+      if (res['success']) {
+        log('Shift data updated successfully');
+        const snackBar = SnackBar(
+          content: Text('Shift data saved successfully'),
+          duration: Duration(seconds: 2),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      } else {
+        log('Error updating shift data: ${res['message']}');
+        final snackBar = SnackBar(
+          content: Text('Error saving shift data: ${res['message']}'),
+          duration: const Duration(seconds: 2),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    } catch (e) {
+      log('Error saving shift data: $e');
+    }
+  }
+
+  // todo pending implementation weekwise and thus indicate the calender
+  Future<void> _submitBtn(int shiftIndex) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('email');
+      final updatedBy = email ?? 'Unknown User';
+      final updateTime = DateTime.now().toIso8601String();
+
+      final shift = shifts[shiftIndex];
+      final data = {
+        "TsId": shift['TsId'],
+        "ShiftId": shift['ShiftId'],
+        "ServiceCode": shift['ServiceCode'],
+        "ClientId": shift['ClientId'],
+        "TlId": shift['TlId'],
+        "TlRemarks": shift['TlRemarks'],
+        "TlStatus": "P",
+        "RmId": shift['RmId'],
+        "RmRemarks": shift['RmRemarks'],
+        "RmStatus": "P",
+        "WorkerRemarks": shift['WorkerRemarks'],
+        "ShiftStartDate": shift['ShiftStartDate'],
+        "ShiftEndDate": shift['ShiftEndDate'],
+        "ExtendedMinutes": shift['ExtendedMinutes'],
+        "ShiftHrs": _hrControllers[shiftIndex]?.text ?? '0',
+        "Km": _kmControllers[shiftIndex]?.text ?? '0',
+        "PayRate": shift['PayRate'],
+        "ChargeRate": shift['ChargeRate'],
+        "RecStatus": shift['RecStatus'],
+        "UpdateBy": updatedBy,
+        "UpdateTime": updateTime,
+      };
+
+      log('Saving shift data: $data');
+
+      final res = await Api.put('updateTimesheetDetailData', data);
+
+      if (res['success']) {
+        log('Shift data updated successfully');
+        // Show a success message or update the UI as needed
+      } else {
+        log('Error updating shift data: ${res['message']}');
+        // Handle the error appropriately
+      }
+    } catch (e) {
+      log('Error saving shift data: $e');
+    }
+  }
+
+  void _enterEditMode(int index) {
+    setState(() {
+      isEditMode = true;
+      editingShiftIndex = index;
+    });
+  }
+
+  void _exitEditMode() {
+    setState(() {
+      isEditMode = false;
+      editingShiftIndex = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ThemeBloc, ThemeMode>(
@@ -178,6 +287,15 @@ class _TimesheetsState extends State<Timesheets> {
           appBar: AppBar(
             title: const Text('Timesheets'),
             actions: [
+              // submit button
+              IconButton(
+                icon: const Icon(Icons.save),
+                onPressed: () {
+                  for (int i = 0; i < shifts.length; i++) {
+                    _submitBtn(i);
+                  }
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: _fetchShifts,
@@ -259,151 +377,282 @@ class _TimesheetsState extends State<Timesheets> {
                             child: _isLoading
                                 ? const Center(
                                     child: CircularProgressIndicator())
-                                : ListView.builder(
-                                    itemCount: filteredShifts.length,
-                                    itemBuilder: (context, index) {
-                                      final shift = filteredShifts[index];
-                                      final shiftIndex = shifts.indexOf(shift);
-                                      return GestureDetector(
-                                        onTap: () {
-                                          Navigator.pushNamed(
-                                              context, '/shift_details',
-                                              arguments: shift);
-                                        },
-                                        child: Card(
-                                          elevation: 0,
-                                          color: shift['TlStatus'] == 'P'
-                                              ? colorScheme.secondaryContainer
-                                                  .withOpacity(0.5)
-                                              : shift['TlStatus'] == 'A'
-                                                  ? Colors.green
+                                : filteredShifts.isEmpty
+                                    ? const Center(
+                                        child: Text('No shifts found',
+                                            style:
+                                                TextStyle(color: Colors.grey)))
+                                    : ListView.builder(
+                                        itemCount: filteredShifts.length,
+                                        itemBuilder: (context, index) {
+                                          final shift = filteredShifts[index];
+                                          final shiftIndex =
+                                              shifts.indexOf(shift);
+                                          return GestureDetector(
+                                            onTap: () {
+                                              Navigator.pushNamed(
+                                                  context, '/shift_details',
+                                                  arguments: shift['ShiftId']);
+                                            },
+                                            onLongPress: () {
+                                              _enterEditMode(shiftIndex);
+                                            },
+                                            child: Card(
+                                              elevation: 0,
+                                              color: shift['TlStatus'] ==
+                                                          'P' || // todo U for pending submission
+                                                      shift['TlStatus'] == 'U'
+                                                  ? colorScheme
+                                                      .secondaryContainer
                                                       .withOpacity(0.5)
-                                                  : colorScheme.error
-                                                      .withOpacity(0.5),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 8, horizontal: 16),
-                                            child: Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: <Widget>[
-                                                Expanded(
-                                                  flex: 2,
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: <Widget>[
-                                                      Text(
-                                                        textAlign:
-                                                            TextAlign.left,
-                                                        '#${shift['ShiftId']}',
-                                                        style: TextStyle(
-                                                            fontSize: 21,
-                                                            color: colorScheme
-                                                                .tertiary),
+                                                  : shift['TlStatus'] == 'A'
+                                                      ? Colors.green
+                                                          .withOpacity(0.5)
+                                                      : colorScheme.error
+                                                          .withOpacity(0.5),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8,
+                                                        horizontal: 16),
+                                                child: Column(
+                                                  children: [
+                                                    Row(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: <Widget>[
+                                                        Expanded(
+                                                          flex: 2,
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: <Widget>[
+                                                              Text(
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                '#${shift['ShiftId']}',
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        21,
+                                                                    color: colorScheme
+                                                                        .tertiary),
+                                                              ),
+                                                              Text(
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .left,
+                                                                '${DateFormat('HH:mm').format(_parseDate(shift['ActualStartTime'])!)} - ${DateFormat('HH:mm').format(_parseDate(shift['ActualEndTime'])!)}',
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    color: colorScheme
+                                                                        .primary),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        Expanded(
+                                                          flex: 1,
+                                                          child: Card(
+                                                            elevation: 0,
+                                                            color: isEditMode &&
+                                                                    editingShiftIndex ==
+                                                                        shiftIndex
+                                                                ? colorScheme
+                                                                    .surface
+                                                                : Colors
+                                                                    .transparent,
+                                                            child: isEditMode &&
+                                                                    editingShiftIndex ==
+                                                                        shiftIndex
+                                                                ? TextField(
+                                                                    controller:
+                                                                        _kmControllers[
+                                                                            shiftIndex],
+                                                                    onChanged:
+                                                                        (value) {
+                                                                      shift['Km'] =
+                                                                          double.tryParse(value) ??
+                                                                              0;
+                                                                    },
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    keyboardType:
+                                                                        TextInputType
+                                                                            .number,
+                                                                    decoration:
+                                                                        const InputDecoration(
+                                                                      border: InputBorder
+                                                                          .none,
+                                                                      hintText:
+                                                                          '0',
+                                                                    ),
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        color: colorScheme
+                                                                            .primary),
+                                                                  )
+                                                                : Text(
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    '${shift['Km']?.toStringAsFixed(2) ?? '0'}',
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        color: colorScheme
+                                                                            .primary),
+                                                                  ),
+                                                          ),
+                                                        ),
+                                                        Expanded(
+                                                          flex: 1,
+                                                          child: Card(
+                                                            elevation: 0,
+                                                            color: isEditMode &&
+                                                                    editingShiftIndex ==
+                                                                        shiftIndex
+                                                                ? colorScheme
+                                                                    .surface
+                                                                : Colors
+                                                                    .transparent,
+                                                            child: isEditMode &&
+                                                                    editingShiftIndex ==
+                                                                        shiftIndex
+                                                                ? TextField(
+                                                                    controller:
+                                                                        _hrControllers[
+                                                                            shiftIndex],
+                                                                    onChanged:
+                                                                        (value) {
+                                                                      _onHoursChanged(
+                                                                          value,
+                                                                          shiftIndex);
+                                                                      shift['ShiftHrs'] =
+                                                                          double.tryParse(value) ??
+                                                                              0;
+                                                                    },
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    keyboardType:
+                                                                        TextInputType
+                                                                            .number,
+                                                                    decoration:
+                                                                        const InputDecoration(
+                                                                      border: InputBorder
+                                                                          .none,
+                                                                      hintText:
+                                                                          '0',
+                                                                    ),
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        color: colorScheme
+                                                                            .primary),
+                                                                  )
+                                                                : Text(
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .center,
+                                                                    '${shift['ShiftHrs']?.toStringAsFixed(2) ?? '0'}',
+                                                                    style: TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        color: colorScheme
+                                                                            .primary),
+                                                                  ),
+                                                          ),
+                                                        ),
+                                                        Expanded(
+                                                          flex: 1,
+                                                          child: Text(
+                                                            textAlign: TextAlign
+                                                                .center,
+                                                            '\$${(shift['PayRate'] ?? 0).toStringAsFixed(2)}',
+                                                            style: TextStyle(
+                                                                fontSize: 18,
+                                                                color: colorScheme
+                                                                    .primary),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    if (isEditMode &&
+                                                        editingShiftIndex ==
+                                                            shiftIndex) ...[
+                                                      Divider(
+                                                        color: colorScheme
+                                                            .primary
+                                                            .withOpacity(0.5),
                                                       ),
-                                                      Text(
-                                                        textAlign:
-                                                            TextAlign.left,
-                                                        '${DateFormat('HH:mm').format(_parseDate(shift['ActualStartTime'])!)} - ${DateFormat('HH:mm').format(_parseDate(shift['ActualEndTime'])!)}',
-                                                        style: TextStyle(
-                                                            fontSize: 16,
-                                                            color: colorScheme
-                                                                .primary),
+                                                      Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .end,
+                                                        children: [
+                                                          ElevatedButton(
+                                                            onPressed: () {
+                                                              _saveShiftData(
+                                                                  shiftIndex);
+                                                              _exitEditMode();
+                                                            },
+                                                            style:
+                                                                ElevatedButton
+                                                                    .styleFrom(
+                                                              backgroundColor:
+                                                                  colorScheme
+                                                                      .primary,
+                                                              foregroundColor:
+                                                                  colorScheme
+                                                                      .onPrimary,
+                                                            ),
+                                                            child: const Text(
+                                                                'Save'),
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 8),
+                                                          ElevatedButton(
+                                                            onPressed:
+                                                                _exitEditMode,
+                                                            style:
+                                                                ElevatedButton
+                                                                    .styleFrom(
+                                                              backgroundColor:
+                                                                  colorScheme
+                                                                      .primary,
+                                                              foregroundColor:
+                                                                  colorScheme
+                                                                      .onPrimary,
+                                                            ),
+                                                            child: const Text(
+                                                                'Cancel'),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ],
-                                                  ),
+                                                  ],
                                                 ),
-                                                Expanded(
-                                                  flex: 1,
-                                                  child: Card(
-                                                    elevation: 0,
-                                                    child: TextField(
-                                                      controller:
-                                                          _kmControllers[
-                                                              shiftIndex],
-                                                      onChanged: (value) {
-                                                        _onHoursChanged(
-                                                            value, shiftIndex);
-                                                        shift['Km'] =
-                                                            double.tryParse(
-                                                                    value) ??
-                                                                0;
-                                                      },
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        border:
-                                                            InputBorder.none,
-                                                        hintText: '0',
-                                                      ),
-                                                      style: TextStyle(
-                                                          fontSize: 16,
-                                                          color: colorScheme
-                                                              .primary),
-                                                    ),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  flex: 1,
-                                                  child: Card(
-                                                    elevation: 0,
-                                                    child: TextField(
-                                                      controller:
-                                                          _hrControllers[
-                                                              shiftIndex],
-                                                      onChanged: (value) {
-                                                        _onHoursChanged(
-                                                            value, shiftIndex);
-                                                        shift['ShiftHrs'] =
-                                                            double.tryParse(
-                                                                    value) ??
-                                                                0;
-                                                      },
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                      keyboardType:
-                                                          TextInputType.number,
-                                                      decoration:
-                                                          const InputDecoration(
-                                                        border:
-                                                            InputBorder.none,
-                                                        hintText: '0',
-                                                      ),
-                                                      style: TextStyle(
-                                                          fontSize: 16,
-                                                          color: colorScheme
-                                                              .primary),
-                                                    ),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  flex: 1,
-                                                  child: Text(
-                                                    textAlign: TextAlign.center,
-                                                    '\$${(shift['PayRate'] ?? 0).toStringAsFixed(2)}',
-                                                    style: TextStyle(
-                                                        fontSize: 18,
-                                                        color: colorScheme
-                                                            .primary),
-                                                  ),
-                                                ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                          );
+                                        },
+                                      ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                ),
+                Divider(
+                  color: colorScheme.primary.withOpacity(0.5),
+                  indent: 16,
+                  endIndent: 16,
                 ),
                 // Show daily total
                 Card(
@@ -494,45 +743,7 @@ class _TimesheetsState extends State<Timesheets> {
                             color: colorScheme.primary.withOpacity(.5))),
                   ],
                 ),
-                Divider(
-                  color: colorScheme.primary,
-                  indent: 16,
-                  endIndent: 16,
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: <Widget>[
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          fixedSize: const Size(96, 48),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          'Save',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 16),
-                        ),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          fixedSize: const Size(96, 48),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          'Submit',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

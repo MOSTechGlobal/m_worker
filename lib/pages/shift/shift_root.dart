@@ -24,6 +24,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   late bool hasAppNote = false;
   late bool hasProfile = false;
   late String shiftAlert = '';
+  late bool isLoading = false;
   bool _isDialogShown = false; // Flag to track if the dialog has been shown
 
   @override
@@ -35,12 +36,30 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final shift =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    shiftData = Map<String, dynamic>.from(shift);
+    final shiftArguments = ModalRoute.of(context)!.settings.arguments;
+
+    if (shiftArguments is Map<String, dynamic>) {
+      shiftData = Map<String, dynamic>.from(shiftArguments);
+    } else if (shiftArguments is int) {
+      _fetchShiftData(shiftArguments);
+    }
     hasAppNote =
         shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
     _fetchClientmWorkerData();
+  }
+
+  Future<void> _fetchShiftData(shiftID) async {
+    setState(() {
+      isLoading = true;
+    });
+    await Api.get('getApprovedShifts/$shiftID').then((response) {
+      setState(() {
+        shiftData = response['data'][0];
+      });
+    });
+    setState(() {
+      isLoading = false;
+    });
   }
 
   Future<void> _fetchClientmWorkerData() async {
@@ -243,20 +262,23 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
               ),
             ),
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              ShiftDetails(
-                shift: shiftData,
-                onStatusChanged: _updateShiftStatus,
-              ),
-              ShiftNotes(
-                shift: shiftData,
-                clientmWorkerData:
-                    clientmWorkerData.isNotEmpty ? clientmWorkerData[0] : {},
-              ),
-            ],
-          ),
+          body: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    ShiftDetails(
+                      shift: shiftData,
+                      onStatusChanged: _updateShiftStatus,
+                    ),
+                    ShiftNotes(
+                      shift: shiftData,
+                      clientmWorkerData: clientmWorkerData.isNotEmpty
+                          ? clientmWorkerData[0]
+                          : {},
+                    ),
+                  ],
+                ),
         );
       },
     );

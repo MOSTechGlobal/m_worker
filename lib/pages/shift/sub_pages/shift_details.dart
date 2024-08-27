@@ -335,10 +335,10 @@ class _ShiftDetailsState extends State<ShiftDetails> {
       'TlId': clientData['CaseManager'],
       'TlRemarks':
           workerID == clientData['CaseManager'] ? 'Worker is TL' : null,
-      'TlStatus': workerID == clientData['CaseManager'] ? 'A' : 'P',
+      'TlStatus': workerID == clientData['CaseManager'] ? 'A' : 'U',
       'RmId': clientData['CaseManager2'],
       'RmRemarks': null,
-      'RmStatus': 'P',
+      'RmStatus': 'U',
       'WorkerRemarks': null,
       'ShiftStartDate':
           DateTime.parse(shift['ShiftStart']).toLocal().toString(),
@@ -528,6 +528,25 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                // if (shift['ShiftStatus'].toString().contains('Completed'))
+                //   GestureDetector(
+                //     onTap: () {
+                //       Navigator.of(context).pushNamed('/end_shift',
+                //           arguments: {'shift': shift, 'worker': workerData});
+                //     },
+                //     child: Card(
+                //       color: colorScheme.tertiaryContainer,
+                //       child: Padding(
+                //         padding: const EdgeInsets.all(10.0),
+                //         child: Text(
+                //           'See Shift End Fields',
+                //           style: TextStyle(
+                //               color: colorScheme.onTertiaryContainer,
+                //               fontSize: 16),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
                 if ((shift['ShiftStatus'] == 'Not Started' ||
                         shift['ShiftStatus'] == 'Confirmed') &&
                     DateTime.now().day ==
