@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../utils/timesheet/color_for_status.dart';
+
 class WeeklyCalendarView extends StatefulWidget {
   final void Function(DateTime selectedDate) onDateSelected;
   final ColorScheme colorScheme;
-  final Map<DateTime, String> shiftStatuses; // Add this parameter
+  final Map<DateTime, Map<String, String>> shiftStatuses;
 
   const WeeklyCalendarView({
     Key? key,
     required this.onDateSelected,
     required this.colorScheme,
-    required this.shiftStatuses, // Add this parameter
+    required this.shiftStatuses,
   }) : super(key: key);
 
   @override
@@ -50,7 +52,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       final isToday = day.day == DateTime.now().day &&
           day.month == DateTime.now().month &&
           day.year == DateTime.now().year;
-      final status = widget.shiftStatuses[day];
+      final statuses =
+          widget.shiftStatuses[DateTime(day.year, day.month, day.day)];
 
       weekDays.add(
         Expanded(
@@ -63,9 +66,7 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                         day.month == _currentDate.month &&
                         day.year == _currentDate.year
                     ? widget.colorScheme.primaryContainer
-                    : day.day == DateTime.now().day &&
-                            day.month == DateTime.now().month &&
-                            day.year == DateTime.now().year
+                    : isToday
                         ? widget.colorScheme.tertiaryContainer.withOpacity(0.5)
                         : null,
                 borderRadius: BorderRadius.circular(8),
@@ -88,26 +89,25 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                           : FontWeight.normal,
                     ),
                   ),
-                  if (status == 'U')
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+                  if (statuses != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (final status in statuses.entries)
+                          Container(
+                            height: 5,
+                            width: 10,
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.all(4.0),
+                            decoration: BoxDecoration(
+                              color: getColor(status.value),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                      ],
                     )
-                  else if (status == 'P')
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                  ],
                 ],
               ),
             ),

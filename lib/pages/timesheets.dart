@@ -20,7 +20,7 @@ class _TimesheetsState extends State<Timesheets> {
   DateTime selectedDate = DateTime.now();
   bool _isLoading = false;
   List<Map<String, dynamic>> shifts = [];
-  Map<DateTime, String> shiftStatuses = {};
+  Map<DateTime, Map<String, String>> shiftStatuses = {};
 
   bool isEditMode = false;
   int? editingShiftIndex;
@@ -71,11 +71,31 @@ class _TimesheetsState extends State<Timesheets> {
       if (res['success']) {
         setState(() {
           shifts = List<Map<String, dynamic>>.from(res['data']);
-          shiftStatuses = {
-            for (var shift in res['data'])
-              DateFormat('yyyy-MM-dd').parse(shift['ShiftStartDate']):
-                  shift['TlStatus']
-          };
+          for (var shift in res['data']) {
+            DateTime shiftDate = DateFormat('yyyy-MM-dd')
+                .parse(shift['ShiftStartDate'], true)
+                .toLocal();
+
+            // Normalize the date to ensure consistent comparisons (setting time to 00:00:00)
+            shiftDate =
+                DateTime(shiftDate.year, shiftDate.month, shiftDate.day);
+
+            if (!shiftStatuses.containsKey(shiftDate)) {
+              shiftStatuses[shiftDate] = {
+                'TlStatus': shift['TlStatus'],
+                'RmStatus': shift['RmStatus'],
+              };
+            } else {
+              var existingStatuses = shiftStatuses[shiftDate];
+              if (shift['TlStatus'] != existingStatuses?['TlStatus']) {
+                existingStatuses?['TlStatus'] = shift['TlStatus'];
+              }
+              if (shift['RmStatus'] != existingStatuses?['RmStatus']) {
+                existingStatuses?['RmStatus'] = shift['RmStatus'];
+              }
+            }
+          }
+
           _initializeControllers();
         });
       } else {
@@ -167,6 +187,8 @@ class _TimesheetsState extends State<Timesheets> {
     setState(() {
       selectedDate = date;
     });
+
+    _fetchShifts();
   }
 
   void _onHoursChanged(String value, int index) {
@@ -214,54 +236,94 @@ class _TimesheetsState extends State<Timesheets> {
       }
     } catch (e) {
       log('Error saving shift data: $e');
+    } finally {
+      _fetchShifts();
     }
   }
 
-  // todo pending implementation week wise and thus indicate the calender
-  Future<void> _submitBtn(int shiftIndex) async {
-    try {
-      final email = await Prefs.getEmail();
-      final updatedBy = email ?? 'Unknown User';
-      final updateTime = DateTime.now().toIso8601String();
+  // todo indicate the calender
+  Future<void> _submitBtn() async {
+    int count = 0;
+    List errors = [];
+    final weekStart = getWeekStart(selectedDate);
+    final weekEnd = weekStart.add(const Duration(days: 6));
 
-      final shift = shifts[shiftIndex];
-      final data = {
-        "TsId": shift['TsId'],
-        "ShiftId": shift['ShiftId'],
-        "ServiceCode": shift['ServiceCode'],
-        "ClientId": shift['ClientId'],
-        "TlId": shift['TlId'],
-        "TlRemarks": shift['TlRemarks'],
-        "TlStatus": "P",
-        "RmId": shift['RmId'],
-        "RmRemarks": shift['RmRemarks'],
-        "RmStatus": "P",
-        "WorkerRemarks": shift['WorkerRemarks'],
-        "ShiftStartDate": shift['ShiftStartDate'],
-        "ShiftEndDate": shift['ShiftEndDate'],
-        "ExtendedMinutes": shift['ExtendedMinutes'],
-        "ShiftHrs": _hrControllers[shiftIndex]?.text ?? '0',
-        "Km": _kmControllers[shiftIndex]?.text ?? '0',
-        "PayRate": shift['PayRate'],
-        "ChargeRate": shift['ChargeRate'],
-        "RecStatus": shift['RecStatus'],
-        "UpdateBy": updatedBy,
-        "UpdateTime": updateTime,
-      };
+    final weekShifts = shifts.where((shift) {
+      final shiftDate = DateTime.parse(shift['ShiftStartDate']);
+      return shiftDate.isAfter(weekStart.subtract(const Duration(days: 1))) &&
+          shiftDate.isBefore(weekEnd.add(const Duration(days: 1)));
+    }).toList();
 
-      log('Saving shift data: $data');
+    for (var shift in weekShifts) {
+      try {
+        final email = await Prefs.getEmail();
+        final updatedBy = email ?? 'Unknown User';
+        final updateTime = DateTime.now().toIso8601String();
 
-      final res = await Api.put('updateTimesheetDetailData', data);
+        final data = {
+          "TsId": shift['TsId'],
+          "ShiftId": shift['ShiftId'],
+          "UpdateBy": updatedBy,
+          "UpdateTime": updateTime,
+        };
 
-      if (res['success']) {
-        log('Shift data updated successfully');
-        // Show a success message or update the UI as needed
-      } else {
-        log('Error updating shift data: ${res['message']}');
-        // Handle the error appropriately
+        log('Saving shift data: $data');
+
+        final res = await Api.put('submitTimesheetDetailsWorkerSide', data);
+
+        if (res['success']) {
+          log('Shift data updated successfully');
+          // todo notify the users
+          count++;
+        } else {
+          log('Error updating shift data: ${res['message']}');
+          errors.add({shift['ShiftId']: res['message']});
+        }
+      } catch (e) {
+        log('Error saving shift data: $e');
+      } finally {
+        _fetchShifts();
       }
-    } catch (e) {
-      log('Error saving shift data: $e');
+    }
+    if (count == weekShifts.length) {
+      showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title:
+                  const Text('Success', style: TextStyle(color: Colors.green)),
+              content: Text(
+                  'This week\'s timesheet has been submitted, your TL will review it shortly.',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 16)),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('OK',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary)),
+                ),
+              ],
+            );
+          });
+    } else {
+      final snackBar = SnackBar(
+        content: Text('Error saving shift data, please try again later',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer)),
+        duration: const Duration(seconds: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        dismissDirection: DismissDirection.horizontal,
+        showCloseIcon: true,
+        closeIconColor: Theme.of(context).colorScheme.error,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 
@@ -292,11 +354,7 @@ class _TimesheetsState extends State<Timesheets> {
               // submit button
               IconButton(
                 icon: const Icon(Icons.save),
-                onPressed: () {
-                  for (int i = 0; i < shifts.length; i++) {
-                    _submitBtn(i);
-                  }
-                },
+                onPressed: _submitBtn,
               ),
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -315,11 +373,7 @@ class _TimesheetsState extends State<Timesheets> {
                         Padding(
                           padding: const EdgeInsets.all(2.0),
                           child: WeeklyCalendarView(
-                            onDateSelected: (date) {
-                              setState(() {
-                                selectedDate = date;
-                              });
-                            },
+                            onDateSelected: _onDateSelected,
                             colorScheme: colorScheme,
                             shiftStatuses: shiftStatuses,
                           ),

@@ -21,6 +21,7 @@ class Api {
     try {
       final email = await Prefs.getEmail();
       final password = await Prefs.getPassword();
+      log('Refreshing token for $email');
       if (email != null && password != null) {
         var credentials;
         try {
