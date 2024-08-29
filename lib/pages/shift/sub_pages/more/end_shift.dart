@@ -12,9 +12,9 @@ import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/button.dart';
 import 'package:m_worker/components/mFilledTextField.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../utils/api.dart';
+import '../../../../utils/prefs.dart';
 
 class EndShift extends StatefulWidget {
   const EndShift({super.key});
@@ -132,9 +132,8 @@ class _EndShiftState extends State<EndShift> {
     final endLoc = '(${location.latitude}, ${location.longitude})';
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final workerID = prefs.getInt('workerID')!;
+      final company = await Prefs.getCompanyName();
+      final workerID = await Prefs.getWorkerID();
       String objectLocation = '';
 
       setState(() {
@@ -282,8 +281,7 @@ class _EndShiftState extends State<EndShift> {
   }
 
   Future _saveNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email');
+    final email = await Prefs.getEmail();
     if (_noteController.text.isNotEmpty) {
       // TODO: redesign the existing table structure
       // TODO: fix the data to be sent and the endpoint to be called after confirming and fixing the backend
@@ -340,12 +338,12 @@ class _EndShiftState extends State<EndShift> {
     return isValid;
   }
 
-  // todo add worker name and last name in extension table
-
-  void _endShift() {
+  Future<void> _endShift() async {
     if (!_validateFields()) {
       return;
     }
+
+    await Prefs.clearAlarmSubscribed();
 
     try {
       if (isShiftExtened) {

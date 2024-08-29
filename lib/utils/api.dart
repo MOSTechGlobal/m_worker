@@ -3,7 +3,7 @@ import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 
 import 'api_errors/refresh_token_error_dialog.dart';
 
@@ -19,20 +19,31 @@ class Api {
     _isRefreshing = true;
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('email');
-      final password = prefs.getString('password');
+      final email = await Prefs.getEmail();
+      final password = await Prefs.getPassword();
       if (email != null && password != null) {
-        final credentials = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(email: email, password: password);
+        var credentials;
+        try {
+          credentials = await FirebaseAuth.instance
+              .signInWithEmailAndPassword(email: email, password: password);
+        } catch (e) {
+          log('Error refreshing token: $e');
+          _isRefreshing = true; // Reset the flag even if there's an error
+          showTokenRefreshErrorDialog(); // Show the error dialog
+          return null;
+        }
         String? bearer = await credentials.user!.getIdToken();
-        await prefs.setString('bearer', bearer!);
-        _isRefreshing = false; // Reset the flag after successful refresh
+        await Prefs.setToken(bearer!);
+        _isRefreshing = false;
         return bearer;
+      } else {
+        _isRefreshing = true;
+        showTokenRefreshErrorDialog();
+        return null;
       }
     } catch (e) {
       log('Error refreshing token: $e');
-      _isRefreshing = false; // Reset the flag even if there's an error
+      _isRefreshing = true; // Reset the flag even if there's an error
       showTokenRefreshErrorDialog(); // Show the error dialog
     }
     _isRefreshing = false; // Ensure the flag is reset before exiting
@@ -41,8 +52,8 @@ class Api {
 
   static Future<dynamic> _makeRequest(String method, String endpoint,
       {Map<String, dynamic>? data}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final bearerToken = 'Bearer ${prefs.getString("bearer")}';
+    final token = await Prefs.getToken();
+    final bearerToken = 'Bearer $token';
     final uri = Uri.parse('$baseUrl/api/$endpoint');
     final headers = {
       'Content-Type': 'application/json; charset=UTF-8',

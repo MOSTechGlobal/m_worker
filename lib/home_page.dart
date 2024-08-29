@@ -11,8 +11,8 @@ import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/drawer.dart';
 import 'package:m_worker/components/shift_tile/listTile.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:m_worker/weather/weather_widget.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -32,8 +32,6 @@ class _HomePageState extends State<HomePage> {
   late bool showWeather = true;
 
   late dynamic workerID;
-
-  SharedPreferences? prefs;
 
   Future<void> _signOut(colorScheme) async {
     showDialog(
@@ -67,9 +65,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _fetchPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
+    final showW = await Prefs.getShowWeather();
     setState(() {
-      showWeather = prefs.getBool('showWeather') ?? true;
+      showWeather = showW;
     });
   }
 
@@ -78,8 +76,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final res = await Api.get('getWorkerMasterDataByEmail/$user');
       _worker = res['data'];
-      prefs = await SharedPreferences.getInstance();
-      prefs!.setString('workerID', _worker['WorkerID'].toString());
+      await Prefs.setWorkerID(_worker['WorkerID']);
       final workerShifts =
           await Api.get('getApprovedShiftsByWorkerID/${_worker['WorkerID']}');
       final String? fcmToken = await FirebaseMessaging.instance.getToken();

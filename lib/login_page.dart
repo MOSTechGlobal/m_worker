@@ -1,13 +1,10 @@
-import 'dart:developer';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_worker/components/mTextField.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/utils/api.dart';
-
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 
 import '../bloc/theme_bloc.dart';
 
@@ -67,13 +64,13 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: _email, password: _password);
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
 
       String? bearer = await userCredential.user!.getIdToken();
-      await prefs.setString('bearer', bearer!);
-      await prefs.setString('company', _company);
-      await prefs.setString('email', _email);
-      await prefs.setString('password', _password);
+
+      await Prefs.setToken(bearer!);
+      await Prefs.setCompanyName(_company);
+      await Prefs.setEmail(_email);
+      await Prefs.setPassword(_password);
 
       errorMsg = 'Success';
 

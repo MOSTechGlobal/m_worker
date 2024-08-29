@@ -2,9 +2,9 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../utils/api.dart'; // Make sure to import this package
+import '../utils/api.dart';
+import '../utils/prefs.dart'; // Make sure to import this package
 
 class Availability extends StatefulWidget {
   const Availability({super.key});
@@ -25,8 +25,7 @@ class _AvailabilityState extends State<Availability> {
   }
 
   void _fetchAvailability() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final workerID = prefs.getString('workerID');
+    final workerID = await Prefs.getWorkerID();
     final res =
         await Api.get('getDetailedWorkerAvailabilityTimeData/$workerID');
     final res0 = await Api.get('getWorkerAvailabilityTimeData/$workerID');
@@ -83,8 +82,7 @@ class _AvailabilityState extends State<Availability> {
     });
 
     // Optionally, save the updated data to the server
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final workerID = prefs.getString('workerID');
+    final workerID = await Prefs.getWorkerID();
     //await Api.put('updateWorkerAvailabilityData/$workerID', data: _workerData);
     log('$newFromDate, $newToDate');
   }

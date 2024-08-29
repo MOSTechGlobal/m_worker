@@ -11,7 +11,8 @@ import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/button.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../utils/prefs.dart';
 
 class MyAccount extends StatefulWidget {
   const MyAccount({super.key});
@@ -21,8 +22,8 @@ class MyAccount extends StatefulWidget {
 }
 
 class _MyAccountState extends State<MyAccount> {
-  late bool showWeather = false;
-  late bool biometricsEnabled = false;
+  late bool _showWeather = false;
+  late bool _biometricsEnabled = false;
 
   late var _companyName = '';
   late var _pfp = '';
@@ -39,8 +40,7 @@ class _MyAccountState extends State<MyAccount> {
   }
 
   void _fetchWorkerData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final workerID = prefs.getString('workerID');
+    final workerID = await Prefs.getWorkerID();
     final res = await Api.get('getWorkerMasterData/$workerID');
     setState(() {
       _workerData.addAll(res['data'][0]);
@@ -49,21 +49,21 @@ class _MyAccountState extends State<MyAccount> {
   }
 
   void _fetchPrefs() async {
-    final prefs = await SharedPreferences.getInstance();
-    final company = prefs.getString('company');
+    final company = await Prefs.getCompanyName();
+    final showWeather = await Prefs.getShowWeather();
+    final biometricsEnabled = await Prefs.getBiometricsEnabled();
     setState(() {
       _companyName = company ?? '';
-      showWeather = prefs.getBool('showWeather') ?? true;
-      biometricsEnabled = prefs.getBool('biometricsEnabled') ?? false;
+      _showWeather = showWeather;
+      _biometricsEnabled = biometricsEnabled;
     });
   }
 
   void _savePrefs(bool value, type) async {
-    final prefs = await SharedPreferences.getInstance();
     if (type == 'showWeather') {
-      prefs.setBool('showWeather', value);
+      await Prefs.setShowWeather(value);
     } else {
-      prefs.setBool('biometricsEnabled', value);
+      await Prefs.setBiometricsEnabled(value);
     }
   }
 
@@ -73,7 +73,7 @@ class _MyAccountState extends State<MyAccount> {
       if (availableBiometrics.isEmpty) {
         log('Biometric authentication not available.');
         setState(() {
-          biometricsEnabled = false;
+          _biometricsEnabled = false;
         });
         // show snackbar to show error
         const snackBar = SnackBar(
@@ -87,7 +87,7 @@ class _MyAccountState extends State<MyAccount> {
       if (!canCheckBiometrics) {
         log('Biometric authentication not available.');
         setState(() {
-          biometricsEnabled = false;
+          _biometricsEnabled = false;
         });
         const snackBar = SnackBar(
           content: Text('Biometric authentication not available.'),
@@ -103,16 +103,15 @@ class _MyAccountState extends State<MyAccount> {
         ),
       );
       if (isAuthenticated) {
-        final prefs = await SharedPreferences.getInstance();
         setState(() {
-          biometricsEnabled = true;
+          _biometricsEnabled = true;
         });
-        prefs.setBool('biometricsEnabled', biometricsEnabled);
+        await Prefs.setBiometricsEnabled(true);
         log('Authenticated');
       } else {
         log('Not authenticated');
         setState(() {
-          biometricsEnabled = false;
+          _biometricsEnabled = false;
         });
       }
     } catch (e) {
@@ -129,9 +128,8 @@ class _MyAccountState extends State<MyAccount> {
         region: 'ap-southeast-2',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final workerID = prefs.getString('workerID');
+      final company = await Prefs.getCompanyName();
+      final workerID = await Prefs.getWorkerID();
 
       final extension = image.path.split('.').last;
       await s3Storage.putObject(
@@ -159,9 +157,8 @@ class _MyAccountState extends State<MyAccount> {
         region: 'ap-southeast-2',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final workerID = prefs.getString('workerID');
+      final company = await Prefs.getCompanyName();
+      final workerID = await Prefs.getWorkerID();
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
@@ -268,10 +265,10 @@ class _MyAccountState extends State<MyAccount> {
                             fontSize: 14),
                       ),
                       trailing: Switch(
-                        value: biometricsEnabled,
+                        value: _biometricsEnabled,
                         onChanged: (value) {
                           setState(() {
-                            biometricsEnabled = value;
+                            _biometricsEnabled = value;
                             if (value) {
                               _authenticate();
                             } else {
@@ -297,10 +294,10 @@ class _MyAccountState extends State<MyAccount> {
                             fontSize: 14),
                       ),
                       trailing: Switch(
-                        value: showWeather,
+                        value: _showWeather,
                         onChanged: (value) {
                           setState(() {
-                            showWeather = value;
+                            _showWeather = value;
                             _savePrefs(value, 'showWeather');
                           });
                         },
@@ -335,8 +332,7 @@ class _MyAccountState extends State<MyAccount> {
                       textAlign: TextAlign.center,
                     ),
                     onTap: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      prefs.clear();
+                      await Prefs.clearAll();
                       Navigator.pushNamedAndRemoveUntil(
                           context, '/home', (route) => false);
                     },

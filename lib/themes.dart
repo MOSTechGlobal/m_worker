@@ -3,13 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 ThemeData lightTheme = ThemeData(
   useMaterial3: true,
-  textTheme: GoogleFonts.openSansTextTheme(),
+  textTheme: GoogleFonts.interTextTheme(),
   colorScheme: lightColorScheme,
 );
 
 ThemeData darkTheme = ThemeData(
   useMaterial3: true,
-  textTheme: GoogleFonts.openSansTextTheme(),
+  textTheme: GoogleFonts.interTextTheme(),
   colorScheme: darkColorScheme,
 );
 

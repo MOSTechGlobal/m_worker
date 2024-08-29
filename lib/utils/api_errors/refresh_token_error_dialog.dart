@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:m_worker/main.dart';
 
@@ -7,15 +8,19 @@ Future<void> showTokenRefreshErrorDialog() async {
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: Text('Session Expired'),
-        content: Text('Your session has expired. Please log in again.'),
+        title:
+            const Text('Session Expired', style: TextStyle(color: Colors.red)),
+        content: const Text('Your session has expired. Please log in again.',
+            style: TextStyle(color: Colors.black)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               // Navigate to login screen or perform re-authentication
+              FirebaseAuth.instance.signOut();
+              Navigator.of(context).pushNamed('/login');
             },
-            child: Text('OK'),
+            child: const Text('OK', style: TextStyle(color: Colors.red)),
           ),
         ],
       );

@@ -9,8 +9,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ExtendRequestDialog extends StatefulWidget {
   final Map<dynamic, dynamic> shiftData;
@@ -68,9 +68,8 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
 
   void _requestExtension() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final email = prefs.getString('email');
+      final email = await Prefs.getEmail();
+      final company = await Prefs.getCompanyName();
       String objectLocation = '';
 
       setState(() {
@@ -129,6 +128,7 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
           'Status': 'P',
           'EndGeoLoc': null,
           'EndAttachment': null,
+          "WorkerId": widget.workerData['WorkerID'],
           'MakerUser': email,
           'MakerDate': DateTime.now().toLocal().toIso8601String(),
         };
@@ -142,7 +142,7 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
 
       // todo notify
       Api.post('sendNotificationToID', {
-        'id': 'wk_${widget.workerData['CaseManager']}',
+        'id': 'us_${widget.workerData['CaseManager']}',
         'title':
             'Extension requested for shift ${widget.shiftData['ShiftID']} #${response['insertId']}',
         'body':

@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:m_worker/login_page.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
@@ -81,6 +82,7 @@ class MyApp extends StatelessWidget {
             initialRoute: '/',
             routes: {
               '/': (context) => const AuthPage(),
+              '/login': (context) => const LoginPage(),
               '/shift_details': (context) => const ShiftRoot(),
               '/account': (context) => const MyAccount(),
               '/training_qualification': (context) =>

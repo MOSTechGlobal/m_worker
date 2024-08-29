@@ -4,10 +4,14 @@ import 'package:intl/intl.dart';
 class WeeklyCalendarView extends StatefulWidget {
   final void Function(DateTime selectedDate) onDateSelected;
   final ColorScheme colorScheme;
+  final Map<DateTime, String> shiftStatuses; // Add this parameter
 
-  const WeeklyCalendarView(
-      {Key? key, required this.onDateSelected, required this.colorScheme})
-      : super(key: key);
+  const WeeklyCalendarView({
+    Key? key,
+    required this.onDateSelected,
+    required this.colorScheme,
+    required this.shiftStatuses, // Add this parameter
+  }) : super(key: key);
 
   @override
   _WeeklyCalendarViewState createState() => _WeeklyCalendarViewState();
@@ -46,6 +50,8 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
       final isToday = day.day == DateTime.now().day &&
           day.month == DateTime.now().month &&
           day.year == DateTime.now().year;
+      final status = widget.shiftStatuses[day];
+
       weekDays.add(
         Expanded(
           child: GestureDetector(
@@ -82,6 +88,26 @@ class _WeeklyCalendarViewState extends State<WeeklyCalendarView> {
                           : FontWeight.normal,
                     ),
                   ),
+                  if (status == 'U')
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    )
+                  else if (status == 'P')
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                 ],
               ),
             ),

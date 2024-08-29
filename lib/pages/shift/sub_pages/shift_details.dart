@@ -10,7 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/components/shift_detail/shift_extension/extend_request.dart';
 import 'package:m_worker/utils/api.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
 import '../../../bloc/theme_bloc.dart';
@@ -67,15 +67,14 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   }
 
   void _initAlarm() async {
-    final prefs = await SharedPreferences.getInstance();
-    final alreadySubscribed = prefs.getBool('alarmSubscribed') ?? false;
+    final alreadySubscribed = await Prefs.getAlarmSubscribed();
     if (!alreadySubscribed) {
       _alarmSubscription = Alarm.ringStream.stream.listen((event) {
         if (event.id == 42) {
           showBreakEndDialog(context, Theme.of(context).colorScheme);
         }
       });
-      prefs.setBool('alarmSubscribed', true);
+      Prefs.setAlarmSubscribed(true);
     }
   }
 
@@ -245,8 +244,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
 
   Future<void> _fetchWorkerData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final workerID = prefs.getString('workerID').toString();
+      final workerID = await Prefs.getWorkerID();
 
       log('Fetching worker data for WorkerID: $workerID');
 
@@ -324,9 +322,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   }
 
   Future<void> _makeTimeSheetEntry(shift) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final workerID = prefs.getString('workerID').toString();
+    final workerID = await Prefs.getWorkerID();
 
     final data = {
       'ShiftId': shift['ShiftID'],

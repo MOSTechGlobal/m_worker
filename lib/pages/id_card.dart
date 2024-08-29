@@ -1,10 +1,10 @@
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class IdCard extends StatefulWidget {
   const IdCard({super.key});
@@ -56,9 +56,8 @@ class _IdCardState extends State<IdCard> {
   }
 
   void _fetchData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final workerID = prefs.getString('workerID');
-    final company = prefs.getString('company');
+    final workerID = await Prefs.getWorkerID();
+    final company = await Prefs.getCompanyName();
 
     final res = await Api.get('getWorkerMasterData/$workerID');
     setState(() {
@@ -78,9 +77,8 @@ class _IdCardState extends State<IdCard> {
         region: 'ap-southeast-2',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final workerID = prefs.getString('workerID');
+      final company = await Prefs.getCompanyName();
+      final workerID = await Prefs.getWorkerID();
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
@@ -100,7 +98,8 @@ class _IdCardState extends State<IdCard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: _companyColors['light'] ?? Colors.black),
+        iconTheme:
+            IconThemeData(color: _companyColors['light'] ?? Colors.black),
         title: Text('ID Card',
             style: TextStyle(color: _companyColors['light'] ?? Colors.black)),
         backgroundColor: _companyColors['primary'] ?? Colors.grey.shade200,
@@ -134,15 +133,17 @@ class _IdCardState extends State<IdCard> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _pfp != null?
-                        FadeInImage.assetNetwork(
-                          placeholder: 'assets/images/id_card_pfp_placeholder.png',
-                          image: _pfp!,
-                          width: 150,
-                          height: 150,
-                          fit: BoxFit.cover,
-                          fadeInDuration: const Duration(milliseconds: 500),
-                        ): const SizedBox(height: 150),
+                      _pfp != null
+                          ? FadeInImage.assetNetwork(
+                              placeholder:
+                                  'assets/images/id_card_pfp_placeholder.png',
+                              image: _pfp!,
+                              width: 150,
+                              height: 150,
+                              fit: BoxFit.cover,
+                              fadeInDuration: const Duration(milliseconds: 500),
+                            )
+                          : const SizedBox(height: 150),
                       const SizedBox(height: 20),
                       Text(
                         workerData['FirstName'] + ' ' + workerData['LastName'],
@@ -182,7 +183,6 @@ class _IdCardState extends State<IdCard> {
                         width: 150,
                         height: 150,
                       ),
-
                       Text(
                         'ID: ${workerData['WorkerID']}',
                         style: TextStyle(

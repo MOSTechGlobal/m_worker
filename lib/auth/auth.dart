@@ -2,11 +2,10 @@ import 'dart:developer';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/login_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -32,10 +31,9 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _checkBiometrics() async {
     // Check if biometrics are available
     supportsBiometrics = await _canDoBiometrics();
-
-    final prefs = await SharedPreferences.getInstance();
+    bool biometricsEnabled = await Prefs.getBiometricsEnabled();
     setState(() {
-      isBiometricsEnabled = prefs.getBool('biometricsEnabled') ?? false;
+      isBiometricsEnabled = biometricsEnabled;
       hasCheckedBiometrics = true;
     });
 
@@ -65,7 +63,8 @@ class _AuthPageState extends State<AuthPage> {
         return false;
       }
 
-      List<BiometricType> availableBiometrics = await _auth.getAvailableBiometrics();
+      List<BiometricType> availableBiometrics =
+          await _auth.getAvailableBiometrics();
       if (availableBiometrics.isEmpty) {
         log('No biometrics available');
         return false;
@@ -120,9 +119,8 @@ class _AuthPageState extends State<AuthPage> {
   }
 
   Future<void> _signInWithSavedCredentials() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-   final email = prefs.getString('email');
-   final password = prefs.getString('password');
+    final email = await Prefs.getEmail();
+    final password = await Prefs.getPassword();
 
     if (email == null || password == null) {
       log('No saved credentials found');
@@ -130,7 +128,8 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     try {
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -156,13 +155,14 @@ class _AuthPageState extends State<AuthPage> {
       return const Scaffold(
         body: Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 10),
-                Text('Authenticating...', style: TextStyle(fontSize: 16, color: Colors.grey)),
-              ],
-            )),
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 10),
+            Text('Authenticating...',
+                style: TextStyle(fontSize: 16, color: Colors.grey)),
+          ],
+        )),
       );
     }
 

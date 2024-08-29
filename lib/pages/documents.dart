@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../bloc/theme_bloc.dart';
@@ -64,8 +64,7 @@ class _DocumentsState extends State<Documents> {
       _isLoading = true;
     });
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final workerID = prefs.getString('workerID');
+      final workerID = await Prefs.getWorkerID();
       final response = await Api.get('getWorkerDocumentData/$workerID');
       final Map<String, dynamic> res = response as Map<String, dynamic>;
       setState(() {
@@ -96,9 +95,8 @@ class _DocumentsState extends State<Documents> {
         region: 'ap-southeast-2',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
-      final workerID = prefs.getString('workerID');
+      final company = await Prefs.getCompanyName();
+      final workerID = await Prefs.getWorkerID();
       await s3Storage.putObject(
         'moscaresolutions',
         '$company/worker/$workerID/documents/${documentDetails['DocCategory']}_${documentDetails['DocName']}/${File(documentDetails['DocFile']).path.split('/').last}',
@@ -126,10 +124,9 @@ class _DocumentsState extends State<Documents> {
 
   Future _insertDocument(Map documentDetails) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final workerID = prefs.getString('workerID');
-      final company = prefs.getString('company');
-      final email = prefs.getString('email');
+      final workerID = await Prefs.getWorkerID();
+      final email = await Prefs.getEmail();
+      final company = await Prefs.getCompanyName();
       final response = await Api.post('insertWorkerDocumentData/$workerID', {
         'DocName': documentDetails['DocName'],
         'Category': documentDetails['DocCategory'],

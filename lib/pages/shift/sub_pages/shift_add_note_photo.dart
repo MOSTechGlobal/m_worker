@@ -7,8 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/prefs.dart';
 import 'package:s3_storage/s3_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../bloc/theme_bloc.dart';
 
@@ -41,8 +41,7 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
   }
 
   Future _saveNote() async {
-    final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email');
+    final email = await Prefs.getEmail();
     final note = _noteController.text;
     if (note.isNotEmpty) {
       // TODO: redesign the existing table structure
@@ -81,8 +80,7 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
         region: 'ap-southeast-2',
       );
 
-      final prefs = await SharedPreferences.getInstance();
-      final company = prefs.getString('company');
+      final company = await Prefs.getCompanyName();
 
       final objectLocation =
           '$company/client/${widget.clientID}/notes/${image0!.path.split('/').last}';
@@ -101,7 +99,7 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
       );
 
       // store in db
-      final email = prefs.getString('email');
+      final email = await Prefs.getEmail();
       if (image0 != null) {
         // TODO: redesign the existing table structure
         // TODO: fix the data to be sent and the endpoint to be called after confirming and fixing the backend

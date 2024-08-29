@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/utils/api.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 
 class TrainingQualification extends StatefulWidget {
   const TrainingQualification({super.key});
@@ -25,8 +25,7 @@ class _TrainingQualificationState extends State<TrainingQualification> {
 
   void _fetchData() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final workerID = prefs.getString('workerID');
+      final workerID = await Prefs.getWorkerID();
       final response =
           await Api.get('getWorkerTrainingQualificationData/$workerID');
       final Map<String, dynamic> res = response as Map<String, dynamic>;
@@ -72,32 +71,40 @@ class _TrainingQualificationState extends State<TrainingQualification> {
                   IconButton(
                     icon: const Icon(Icons.notifications_none_outlined),
                     onPressed: () {
-                      showGeneralDialog(context: context, pageBuilder: (context, anim1, anim2) {
-                        return AlertDialog(
-                          title: Text('Expired Items', style: TextStyle(color: colorScheme.error)),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (var item in workerTrainingQualificationData)
-                                if (_isExpired(item['ExpiryDate']))
-                                  ListTile(
-                                    title: Text(
-                                        '${item['TrainingItem']} - ${item['CredentialLevel']}'),
-                                    subtitle: Text('Expiry Date: ${item['ExpiryDate']}'),
+                      showGeneralDialog(
+                          context: context,
+                          pageBuilder: (context, anim1, anim2) {
+                            return AlertDialog(
+                              title: Text('Expired Items',
+                                  style: TextStyle(color: colorScheme.error)),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  for (var item
+                                      in workerTrainingQualificationData)
+                                    if (_isExpired(item['ExpiryDate']))
+                                      ListTile(
+                                        title: Text(
+                                            '${item['TrainingItem']} - ${item['CredentialLevel']}'),
+                                        subtitle: Text(
+                                            'Expiry Date: ${item['ExpiryDate']}'),
+                                      ),
+                                  if (expiredItemsCount == 0)
+                                    Text('No expired items found',
+                                        style: TextStyle(
+                                            color: colorScheme.onSurface)),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                    child: Text('Close',
+                                        style: TextStyle(
+                                            color: colorScheme.primary)),
                                   ),
-
-                              if (expiredItemsCount == 0)
-                                Text('No expired items found', style: TextStyle(color: colorScheme.onSurface)),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: Text('Close', style: TextStyle(color: colorScheme.primary)),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      });
+                            );
+                          });
                     },
                   ),
                   if (expiredItemsCount > 0)
@@ -180,7 +187,7 @@ class _TrainingQualificationState extends State<TrainingQualification> {
               style: TextStyle(
                 fontSize: 18,
                 color: expired(
-                    workerTrainingQualificationData[index]['ExpiryDate'])
+                        workerTrainingQualificationData[index]['ExpiryDate'])
                     ? colorScheme.error
                     : colorScheme.primary,
               ),

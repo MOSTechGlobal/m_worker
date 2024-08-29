@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/components/timesheet/calendar_view.dart';
 import 'package:m_worker/utils/api.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:m_worker/utils/prefs.dart';
 
 import '../bloc/theme_bloc.dart';
 
@@ -20,6 +20,7 @@ class _TimesheetsState extends State<Timesheets> {
   DateTime selectedDate = DateTime.now();
   bool _isLoading = false;
   List<Map<String, dynamic>> shifts = [];
+  Map<DateTime, String> shiftStatuses = {};
 
   bool isEditMode = false;
   int? editingShiftIndex;
@@ -50,11 +51,9 @@ class _TimesheetsState extends State<Timesheets> {
       _isLoading = true;
     });
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final workerID = prefs.getString('workerID');
-      log('Retrieved workerID: $workerID');
-      if (workerID == null || workerID.isEmpty) {
-        log('Error: workerID is null or empty');
+      final workerID = await Prefs.getWorkerID();
+      if (workerID == null) {
+        log('Worker ID not found');
         return;
       }
 
@@ -72,6 +71,11 @@ class _TimesheetsState extends State<Timesheets> {
       if (res['success']) {
         setState(() {
           shifts = List<Map<String, dynamic>>.from(res['data']);
+          shiftStatuses = {
+            for (var shift in res['data'])
+              DateFormat('yyyy-MM-dd').parse(shift['ShiftStartDate']):
+                  shift['TlStatus']
+          };
           _initializeControllers();
         });
       } else {
@@ -175,8 +179,7 @@ class _TimesheetsState extends State<Timesheets> {
 
   Future<void> _saveShiftData(int shiftIndex) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('email');
+      final email = await Prefs.getEmail();
       final updatedBy = email ?? 'Unknown User';
       final updateTime = DateTime.now().toIso8601String();
 
@@ -214,11 +217,10 @@ class _TimesheetsState extends State<Timesheets> {
     }
   }
 
-  // todo pending implementation weekwise and thus indicate the calender
+  // todo pending implementation week wise and thus indicate the calender
   Future<void> _submitBtn(int shiftIndex) async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('email');
+      final email = await Prefs.getEmail();
       final updatedBy = email ?? 'Unknown User';
       final updateTime = DateTime.now().toIso8601String();
 
@@ -313,8 +315,14 @@ class _TimesheetsState extends State<Timesheets> {
                         Padding(
                           padding: const EdgeInsets.all(2.0),
                           child: WeeklyCalendarView(
-                              onDateSelected: _onDateSelected,
-                              colorScheme: colorScheme),
+                            onDateSelected: (date) {
+                              setState(() {
+                                selectedDate = date;
+                              });
+                            },
+                            colorScheme: colorScheme,
+                            shiftStatuses: shiftStatuses,
+                          ),
                         ),
                         const Divider(),
                         Padding(
