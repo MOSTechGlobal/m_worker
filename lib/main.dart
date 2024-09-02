@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:m_worker/components/notification/notif_popup.dart';
 import 'package:m_worker/login_page.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
 import 'package:m_worker/pages/availability.dart';
@@ -14,7 +15,6 @@ import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/shift/shift_root.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/end_shift.dart';
-import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
 import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
 
@@ -32,14 +32,14 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    log("Foreground message received: ${message.data}");
+    log("Foreground message received: ${message}");
     handleNotification(message);
   });
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-    log("Message opened app: ${message.data}");
+    log("Message opened app: ${message}");
     handleNotification(message);
   });
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   await messaging.setForegroundNotificationPresentationOptions(
     alert: true,
     badge: true,
@@ -51,20 +51,14 @@ void main() async {
   runApp(const MyApp());
 }
 
-void handleNotification(RemoteMessage message) {
-  if (message.data['type'] == 'shift-extension') {
-    final int id = int.parse(message.data['id']);
-    final ShiftDetails shiftDetails = ShiftDetails(
-      shift: const {},
-      onStatusChanged: (status) {},
-    );
-    shiftDetails.fetchExtensionRequestStatus(id);
-  }
+Future<void> handleNotification(RemoteMessage message) async {
+  showNotificationDialog(
+      message.notification!.title, message.notification!.body, message.data);
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  log("Background message received: ${message.data}");
+  log("Background message received: ${message}");
   handleNotification(message);
 }
 

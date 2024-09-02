@@ -82,22 +82,34 @@ class _EndShiftState extends State<EndShift> {
     });
   }
 
-  void _checkShiftExtension() {
+  Future<void> _checkShiftExtension() async {
+    log('Checking if shift has an extension request');
     setState(() {
       isLoading = true;
     });
-    Api.get('checkIfExtensionRequestExists', {
-      'ShiftId': shift['ShiftID'].toString(),
-    }).then((response) {
-      if (response['status'] == 'success') {
-        if (response['data'] == true) {
+
+    try {
+      final response = await Api.post('checkIfExtensionRequestExists', {
+        'ShiftId': shift['ShiftID'].toString(),
+      });
+      log('Response: $response');
+      if (response['success'] == true && response['data'] == true) {
+        setState(() {
           isShiftExtened = true;
-        }
+        });
+        log('Shift has an extension request');
+      } else {
+        setState(() {
+          isShiftExtened = false;
+        });
       }
-    });
-    setState(() {
-      isLoading = false;
-    });
+    } catch (e) {
+      log('Error fetching extension data: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   // todo if the worker is defaulter then the shift needs to be on and it goes to senior management for not clocking out on time unless the admin extends the shift
@@ -125,6 +137,7 @@ class _EndShiftState extends State<EndShift> {
   }
 
   Future<void> _endExtension() async {
+    log('Ending extension');
     setState(() {
       isLoading = true;
     });
@@ -206,6 +219,7 @@ class _EndShiftState extends State<EndShift> {
 
   Future<void> _changeShiftStatus(String type, int shiftID,
       {String? reason}) async {
+    log('Changing shift status to $type');
     String status;
     if (type == 'start') {
       status = 'In Progress';
@@ -247,6 +261,7 @@ class _EndShiftState extends State<EndShift> {
   }
 
   Future<void> _timesheetDetails() async {
+    log('Updating timesheet details');
     final endTime = // only current time in hh:mm:ss
         DateTime.now().toIso8601String().substring(11, 19);
     final data = {
@@ -277,10 +292,13 @@ class _EndShiftState extends State<EndShift> {
       }
     }
 
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   Future _saveNote() async {
+    log('Saving note');
     final email = await Prefs.getEmail();
     if (_noteController.text.isNotEmpty) {
       // TODO: redesign the existing table structure
@@ -622,5 +640,3 @@ class _EndShiftState extends State<EndShift> {
     });
   }
 }
-
-// _changeShiftStatus('end', shiftData['ShiftID']);

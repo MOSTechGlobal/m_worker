@@ -8,10 +8,11 @@ Future<void> showTokenRefreshErrorDialog() async {
     context: context,
     builder: (context) {
       return AlertDialog(
-        title:
-            const Text('Session Expired', style: TextStyle(color: Colors.red)),
-        content: const Text('Your session has expired. Please log in again.',
-            style: TextStyle(color: Colors.black)),
+        backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+        title: Text('Session Expired',
+            style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        content: Text('Your session has expired. Please log in again.',
+            style: TextStyle(color: Theme.of(context).colorScheme.primary)),
         actions: [
           TextButton(
             onPressed: () {
@@ -20,7 +21,8 @@ Future<void> showTokenRefreshErrorDialog() async {
               FirebaseAuth.instance.signOut();
               Navigator.of(context).pushNamed('/login');
             },
-            child: const Text('OK', style: TextStyle(color: Colors.red)),
+            child: Text('OK',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
         ],
       );

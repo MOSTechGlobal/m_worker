@@ -169,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                   size: 40,
                 ),
               ),
-              appBarHeight: 70,
+              appBarHeight: 80,
               appBarPadding: const EdgeInsets.only(right: 12, top: 24),
               drawerIconColor: colorScheme.secondary,
             ),

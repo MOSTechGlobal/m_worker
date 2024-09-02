@@ -170,7 +170,8 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
                 child: Text('OK',
                     style: TextStyle(color: widget.colorScheme.error)),
                 onPressed: () {
-                  widget.onExtensionRequested?.call(response['insertId']);
+                  widget.onExtensionRequested
+                      ?.call(response['data']['insertId']);
                   Navigator.of(context).pop();
                 },
               ),

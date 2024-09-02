@@ -121,7 +121,8 @@ class _TimesheetsState extends State<Timesheets> {
         text: shifts[i]['Km']?.toStringAsFixed(2) ?? '0',
       );
       setState(() {
-        shifts[i]['ShiftHrs'] = calculateShiftHours(shifts[i]);
+        shifts[i]['ShiftHrs'] = shifts[i]['ShiftHrs'] ??
+            calculateShiftHours(shifts[i]).toStringAsFixed(2);
         shifts[i]['Km'] = shifts[i]['Km'] ?? 0;
       });
     }
@@ -189,14 +190,6 @@ class _TimesheetsState extends State<Timesheets> {
     });
 
     _fetchShifts();
-  }
-
-  void _onHoursChanged(String value, int index) {
-    final hours = double.tryParse(value) ?? 0;
-    setState(() {
-      shifts[index]['ShiftHrs'] = hours;
-      _hrControllers[index]?.text = hours.toStringAsFixed(2);
-    });
   }
 
   Future<void> _saveShiftData(int shiftIndex) async {
@@ -457,7 +450,11 @@ class _TimesheetsState extends State<Timesheets> {
                                                   arguments: shift['ShiftId']);
                                             },
                                             onLongPress: () {
-                                              _enterEditMode(shiftIndex);
+                                              if (shift['TlStatus'] == 'P' ||
+                                                  shift['TlStatus'] == 'R' ||
+                                                  shift['TlStatus'] == 'U') {
+                                                _enterEditMode(shiftIndex);
+                                              }
                                             },
                                             child: Card(
                                               elevation: 0,
@@ -513,6 +510,21 @@ class _TimesheetsState extends State<Timesheets> {
                                                                     color: colorScheme
                                                                         .primary),
                                                               ),
+                                                              shift['TlStatus'] ==
+                                                                      'R'
+                                                                  ? Text(
+                                                                      textAlign:
+                                                                          TextAlign
+                                                                              .left,
+                                                                      '${shift['TlRemarks']}',
+                                                                      style: TextStyle(
+                                                                          fontSize:
+                                                                              14,
+                                                                          color:
+                                                                              colorScheme.error),
+                                                                    )
+                                                                  : const SizedBox
+                                                                      .shrink(),
                                                             ],
                                                           ),
                                                         ),
@@ -592,9 +604,6 @@ class _TimesheetsState extends State<Timesheets> {
                                                                             shiftIndex],
                                                                     onChanged:
                                                                         (value) {
-                                                                      _onHoursChanged(
-                                                                          value,
-                                                                          shiftIndex);
                                                                       shift['ShiftHrs'] =
                                                                           double.tryParse(value) ??
                                                                               0;

@@ -583,7 +583,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   children: [
                     if (showExtensionBtn) const SizedBox(width: 60),
                     if (shift['ShiftStatus'] == 'In Progress' &&
-                        !DateTime.now()
+                        DateTime.now()
                             .isAfter(DateTime.parse(shift['ShiftEnd'])))
                       SizedBox(
                         width: 150,
@@ -656,11 +656,15 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                   Text(
                                     extensionData['Status'] == 'A'
                                         ? 'Approved'
-                                        : 'Pending',
+                                        : extensionData['Status'] == 'R'
+                                            ? 'Rejected'
+                                            : 'Pending',
                                     style: TextStyle(
                                         color: extensionData['Status'] == 'A'
                                             ? Colors.lightGreen
-                                            : Colors.amber,
+                                            : extensionData['Status'] == 'R'
+                                                ? Colors.red
+                                                : Colors.amber,
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold),
                                   ),
@@ -759,9 +763,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                   color: colorScheme.onSurface, fontSize: 16),
                             ),
                             Text(
-                              DateFormat('dd/MM/yyyy').format(
-                                  DateTime.parse(shift['ShiftStart'])
-                                      .toLocal()),
+                              DateFormat('dd/MM/yyyy')
+                                  .format(DateTime.parse(shift['ShiftStart'])),
                               style: TextStyle(
                                   color: colorScheme.primary,
                                   fontSize: 18,
@@ -784,6 +787,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 Text(
                                   DateFormat('hh:mm aa').format(
                                       DateTime.parse(shift['ShiftStart'])
+                                          .toUtc()
                                           .toLocal()),
                                   style: TextStyle(
                                       color: colorScheme.primary,
@@ -803,6 +807,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                                 Text(
                                   DateFormat('hh:mm aa').format(
                                       DateTime.parse(shift['ShiftEnd'])
+                                          .toUtc()
                                           .toLocal()),
                                   style: TextStyle(
                                       color: colorScheme.primary,
