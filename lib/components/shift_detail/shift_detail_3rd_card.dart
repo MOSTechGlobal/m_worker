@@ -33,11 +33,11 @@ class _ShiftDetails3rdCardState extends State<ShiftDetails3rdCard> {
                   widget.title,
                   style: TextStyle(
                     fontSize: 14,
-                    color: colorScheme
-                        .primary,
+                    color: colorScheme.primary,
                   ),
                 ),
               ),
+              const SizedBox(width: 10),
               Expanded(
                 flex: 2,
                 child: Text(

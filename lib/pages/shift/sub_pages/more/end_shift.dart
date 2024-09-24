@@ -35,6 +35,8 @@ class _EndShiftState extends State<EndShift> {
 
   ScaffoldMessengerState? _scaffoldMessengerState;
 
+  String actualKm = '0.0';
+
   final TextEditingController _kmNoteController = TextEditingController();
   final TextEditingController _travelNoteController = TextEditingController();
   final TextEditingController _timeSheetRemarksController =
@@ -66,7 +68,6 @@ class _EndShiftState extends State<EndShift> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Retrieve the shift data from the arguments
     setState(() {
       isLoading = true;
     });
@@ -75,7 +76,10 @@ class _EndShiftState extends State<EndShift> {
     setState(() {
       shift = args['shift'];
       workerID = args['worker']['WorkerID'];
+      _kmNoteController.text = args['KM'].toStringAsFixed(2);
+      actualKm = args['KM'].toStringAsFixed(2);
     });
+    log('Args: $args');
     _scaffoldMessengerState = ScaffoldMessenger.of(context);
     setState(() {
       isLoading = false;
@@ -89,7 +93,7 @@ class _EndShiftState extends State<EndShift> {
     });
 
     try {
-      final response = await Api.post('checkIfExtensionRequestExists', {
+      final response = await Api.get('checkIfExtensionRequestExists', {
         'ShiftId': shift['ShiftID'].toString(),
       });
       log('Response: $response');
@@ -270,12 +274,13 @@ class _EndShiftState extends State<EndShift> {
       'TravelNote': _travelNoteController.text,
       'WorkerRemarks': _timeSheetRemarksController.text,
       'ActualEndTime': endTime,
+      'ActualKm': actualKm,
       'ExtendedMinutes': _extendedMinutesController.text,
     };
 
     try {
       await Api.post('endShiftInsertTimesheetDetails', data);
-      if (_scaffoldMessengerState != null) {
+      if (mounted && _scaffoldMessengerState != null) {
         _scaffoldMessengerState!.showSnackBar(
           const SnackBar(
               content: Text('Timesheet details updated successfully',
@@ -283,17 +288,17 @@ class _EndShiftState extends State<EndShift> {
         );
       }
     } catch (e) {
-      if (_scaffoldMessengerState != null) {
+      if (mounted && _scaffoldMessengerState != null) {
         _scaffoldMessengerState!.showSnackBar(
           const SnackBar(
               content: Text('Failed to update timesheet details',
                   style: TextStyle(fontSize: 16, color: Colors.white))),
         );
       }
-    }
-
-    if (mounted) {
-      Navigator.pop(context);
+    } finally {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -364,7 +369,7 @@ class _EndShiftState extends State<EndShift> {
     await Prefs.clearAlarmSubscribed();
 
     try {
-      if (isShiftExtened) {
+      if (!isShiftExtened) {
         _endExtension();
       }
       _timesheetDetails();
@@ -442,9 +447,17 @@ class _EndShiftState extends State<EndShift> {
                                   ],
                                 ),
                                 const SizedBox(height: 20),
+                                Text(
+                                  'Enter the extended time in minutes',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.primary,
+                                  ),
+                                  textAlign: TextAlign.start,
+                                ),
                                 MFilledtextfield(
-                                  hintText:
-                                      'Enter the extended time in minutes',
+                                  hintText: 'minutes',
                                   colorScheme: colorScheme,
                                   isValid: _isExtendedMinutesValid,
                                   controller: _extendedMinutesController,
@@ -561,8 +574,17 @@ class _EndShiftState extends State<EndShift> {
                           const SizedBox(height: 10),
                         ] else
                           const SizedBox.shrink(),
+                        Text(
+                          'KM travelled during the shift',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
                         MFilledtextfield(
-                          hintText: 'KM travelled during the shift',
+                          hintText: 'KM',
                           colorScheme: colorScheme,
                           controller: _kmNoteController,
                           onChanged: (value) {
@@ -570,9 +592,18 @@ class _EndShiftState extends State<EndShift> {
                           },
                         ),
                         const SizedBox(height: 20),
+                        Text(
+                          'Travel Note',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
                         MFilledtextfield(
                           multiLine: true,
-                          hintText: 'Travel Note',
+                          hintText: 'note',
                           colorScheme: colorScheme,
                           controller: _travelNoteController,
                           onChanged: (value) {
@@ -580,9 +611,18 @@ class _EndShiftState extends State<EndShift> {
                           },
                         ),
                         const SizedBox(height: 20),
+                        Text(
+                          'TimeSheet Remarks',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
                         MFilledtextfield(
                           multiLine: true,
-                          hintText: 'TimeSheet Remarks',
+                          hintText: 'Remarks',
                           colorScheme: colorScheme,
                           controller: _timeSheetRemarksController,
                           onChanged: (value) {
@@ -592,6 +632,15 @@ class _EndShiftState extends State<EndShift> {
                         const SizedBox(height: 10),
                         const Divider(),
                         const SizedBox(height: 10),
+                        Text(
+                          'Note',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
                         MFilledtextfield(
                           multiLine: true,
                           hintText: 'Notes about the shift (required)',

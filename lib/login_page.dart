@@ -90,9 +90,11 @@ class _LoginPageState extends State<LoginPage> {
       errorMsg = 'An unexpected error occurred.'; // Generic error message
       errorMsg = e.toString();
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
 
     setState(() {

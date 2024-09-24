@@ -133,23 +133,37 @@ class _TimesheetsState extends State<Timesheets> {
       return 0;
     }
     final start = DateFormat('HH:mm:ss').parse(shift['ActualStartTime']);
-    final end = DateFormat('HH:mm:ss').parse(shift['ActualEndTime']);
+    final end = DateFormat('HH:mm:ss').parse(shift['ActualEndTime']) ?? start;
     return end.difference(start).inMinutes / 60;
   }
 
   double get weeklyTotal {
     return weeklyShifts.fold<double>(
       0,
-      (sum, shift) =>
-          sum + (calculateShiftHours(shift) * (shift['PayRate'] ?? 0)),
+      (sum, shift) {
+        final shiftHours =
+            double.tryParse(shift['ShiftHrs']?.toString() ?? '0') ??
+                calculateShiftHours(shift);
+        final payRate =
+            double.tryParse(shift['PayRate']?.toString() ?? '0') ?? 0;
+        return sum + (shiftHours * payRate);
+      },
     );
   }
 
   double get dailyTotal {
+    log('filteredShifts: $filteredShifts');
     return filteredShifts.fold<double>(
       0,
-      (sum, shift) =>
-          sum + (calculateShiftHours(shift) * (shift['PayRate'] ?? 0)),
+      (sum, shift) {
+        // Ensure ShiftHrs and PayRate are parsed as double
+        final shiftHours =
+            double.tryParse(shift['ShiftHrs']?.toString() ?? '0') ??
+                calculateShiftHours(shift);
+        final payRate =
+            double.tryParse(shift['PayRate']?.toString() ?? '0') ?? 0;
+        return sum + (shiftHours * payRate);
+      },
     );
   }
 
@@ -426,7 +440,7 @@ class _TimesheetsState extends State<Timesheets> {
                         ),
                         const Divider(),
                         SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.3,
+                          height: MediaQuery.of(context).size.height * 0.35,
                           child: Padding(
                             padding: const EdgeInsets.all(4.0),
                             child: _isLoading
@@ -503,7 +517,7 @@ class _TimesheetsState extends State<Timesheets> {
                                                                 textAlign:
                                                                     TextAlign
                                                                         .left,
-                                                                '${DateFormat('HH:mm').format(_parseDate(shift['ActualStartTime'])!)} - ${DateFormat('HH:mm').format(_parseDate(shift['ActualEndTime'])!)}',
+                                                                '${DateFormat('HH:mm').format(_parseDate(shift['ActualStartTime'])!)} - ${shift['ActualEndTime'] != null ? DateFormat('HH:mm').format(_parseDate(shift['ActualEndTime'])!) : 'NE'}',
                                                                 style: TextStyle(
                                                                     fontSize:
                                                                         16,
@@ -631,7 +645,7 @@ class _TimesheetsState extends State<Timesheets> {
                                                                     textAlign:
                                                                         TextAlign
                                                                             .center,
-                                                                    '${shift['ShiftHrs']?.toStringAsFixed(2) ?? '0'}',
+                                                                    '${shift['ShiftHrs'] ?? '0'}',
                                                                     style: TextStyle(
                                                                         fontSize:
                                                                             16,

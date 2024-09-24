@@ -41,6 +41,7 @@ dependencies:
   flutter_bloc: ^8.1.5
   bloc: ^8.1.4
   geolocator: ^11.0.0
+  location:
   google_fonts: ^4.0.4
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.0

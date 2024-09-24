@@ -14,6 +14,9 @@ import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
 import 'package:m_worker/pages/myaccount.dart';
 import 'package:m_worker/pages/shift/shift_root.dart';
+import 'package:m_worker/pages/shift/sub_pages/more/client_documents.dart';
+import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/add_client_expenses.dart';
+import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/client_expenses.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/end_shift.dart';
 import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
@@ -86,6 +89,10 @@ class MyApp extends StatelessWidget {
               '/id_card': (context) => const IdCard(),
               '/timesheets': (context) => const Timesheets(),
               '/end_shift': (context) => const EndShift(),
+              '/shift_more_documents': (context) => const ClientDocuments(),
+              '/shift_more_expenses': (context) => const Expenses(),
+              '/shift_more_client_expenses/add': (context) =>
+                  const AddExpense(),
             },
             debugShowCheckedModeBanner: false,
             theme: lightTheme,

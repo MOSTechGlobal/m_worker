@@ -9,7 +9,7 @@ import 'api_errors/refresh_token_error_dialog.dart';
 
 class Api {
   static const String baseUrl =
-      'https://moscare-api-master.vercel.app'; // https://moscare-api-master.vercel.app //http://192.168.0.110:5001
+      'https://afa5-202-94-161-2.ngrok-free.app'; // https://moscare-api-master.vercel.app //http://192.168.0.110:5001
   static bool _isRefreshing = false; // Flag to track token refresh attempts
 
   static Future<String?> _refreshToken() async {
@@ -23,7 +23,7 @@ class Api {
       final password = await Prefs.getPassword();
       log('Refreshing token for $email');
       if (email != null && password != null) {
-        var credentials;
+        UserCredential credentials;
         try {
           credentials = await FirebaseAuth.instance
               .signInWithEmailAndPassword(email: email, password: password);

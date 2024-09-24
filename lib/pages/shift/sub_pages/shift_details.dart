@@ -6,6 +6,7 @@ import 'package:alarm/alarm.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:m_worker/components/shift_detail/shift_extension/extend_request.dart';
@@ -38,18 +39,92 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   bool isBreakActive = false;
   Duration breakDuration = Duration.zero;
   DateTime? breakEndTime;
+  bool showEndShiftBtn = true;
   late StreamSubscription _alarmSubscription;
 
   bool showExtensionBtn = false;
   Map extensionData = {};
 
   late Timer _timer;
-  late Timer _extenstionTimer;
+  late Timer _extensionTimer;
+
+  double totalDistanceKm = 0.0;
 
   XFile? image0;
   late String doc = '';
 
   final player = AudioPlayer();
+
+  Position? _startPosition;
+  Position? _endPosition;
+  double _totalDistance = 0.0;
+  bool _isTracking = false;
+
+  // Function to get current location
+  Future<Position> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled, return an error.
+      return Future.error('Location services are disabled.');
+    }
+
+    // Check for location permissions
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied, return an error.
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are permanently denied, return an error.
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // If permissions are granted, return current position
+    return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+  }
+
+  // Function to start tracking
+  void _startTracking() async {
+    setState(() {
+      _isTracking = true;
+      _totalDistance = 0.0;
+    });
+
+    _startPosition = await _determinePosition();
+  }
+
+  // Function to stop tracking
+  Future<void> _stopTracking() async {
+    setState(() {
+      _isTracking = false;
+    });
+
+    _endPosition = await _determinePosition();
+
+    if (_startPosition != null && _endPosition != null) {
+      _totalDistance = Geolocator.distanceBetween(
+        _startPosition!.latitude,
+        _startPosition!.longitude,
+        _endPosition!.latitude,
+        _endPosition!.longitude,
+      );
+
+      setState(() {
+        totalDistanceKm = _totalDistance / 1000;
+      });
+    }
+    log('Total Distance: $totalDistanceKm');
+  }
 
   @override
   void initState() {
@@ -131,7 +206,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   void dispose() {
     _alarmSubscription.cancel();
     _timer.cancel();
-    _extenstionTimer.cancel();
+    _extensionTimer.cancel();
     player.dispose();
     super.dispose();
   }
@@ -397,12 +472,14 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     } catch (e) {
       log('Error changing shift status: $e');
     }
+
+    _startTracking();
   }
 
   Future<void> _fetchExtensionRequestStatus() async {
     try {
       String shiftIdUrl =
-          'getShiftExtensionDetailDataByShiftId/${shift['ShiftID'].toString()}';
+          'getShiftExtensionDetailDataByShiftId/${shift['ShiftID']}';
       log('Fetching extension data for ShiftID: ${shift['ShiftID']}');
       final response = await Api.get(shiftIdUrl);
 
@@ -415,7 +492,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             extensionData.addAll(response['data'][0]);
           });
           if (extensionData['Status'] == 'A') {
-            _extenstionTimer.cancel(); // Stop polling when status is 'A'
+            _extensionTimer.cancel(); // Stop polling when status is 'A'
             // todo fix sound
             _playSuccessSound();
           }
@@ -424,7 +501,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         log('No extension data found for ShiftID: ${shift['ShiftID']}');
         if (mounted) {
           setState(() {
-            _extenstionTimer.cancel();
+            _extensionTimer.cancel();
           });
         }
         log('Extension status polling stopped');
@@ -577,33 +654,51 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                       },
                     ),
                   ),
-                Row(
+                Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (showExtensionBtn) const SizedBox(width: 60),
                     if (shift['ShiftStatus'] == 'In Progress' &&
-                        DateTime.now()
+                        !DateTime.now()
                             .isAfter(DateTime.parse(shift['ShiftEnd'])))
-                      SizedBox(
-                        width: 150,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            showEndShiftDialog(context, colorScheme);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.errorContainer,
-                            foregroundColor: colorScheme.onErrorContainer,
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.done_outline_rounded),
-                              SizedBox(width: 10),
-                              Text('End Shift'),
-                            ],
-                          ),
-                        ),
-                      ),
+                      showEndShiftBtn
+                          ? Container(
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: SlideAction(
+                                enabled: shift['ShiftStatus'] == 'In Progress',
+                                sliderButtonIcon: Icon(
+                                  Icons.arrow_forward,
+                                  color: colorScheme.onPrimary,
+                                  size: 30,
+                                ),
+                                borderRadius: 15,
+                                innerColor: colorScheme.error,
+                                outerColor: colorScheme.errorContainer,
+                                textColor: colorScheme.onError,
+                                animationDuration:
+                                    const Duration(milliseconds: 500),
+                                submittedIcon: const Icon(
+                                  Icons.check,
+                                  color: Colors.red,
+                                  size: 30,
+                                ),
+                                text: 'Slide to End Shift',
+                                textStyle: TextStyle(
+                                  color: colorScheme.error,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                onSubmit: () async {
+                                  showEndShiftDialog(context, colorScheme);
+                                  setState(() {
+                                    showEndShiftBtn = false;
+                                  });
+                                },
+                              ),
+                            )
+                          : const SizedBox.shrink(),
                     if (shift['ShiftStatus'] == 'In Progress' &&
                         showExtensionBtn) ...[
                       const SizedBox(width: 10),
@@ -907,18 +1002,28 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                setState(() {
+                  showEndShiftBtn = false;
+                });
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
               },
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
+                await _stopTracking();
                 final args = {
                   'shift': shift,
                   'worker': workerData,
+                  'KM': totalDistanceKm,
                 };
-                Navigator.of(context).pop();
-                Navigator.of(context).pushNamed('/end_shift', arguments: args);
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  Navigator.of(context)
+                      .pushNamed('/end_shift', arguments: args);
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.errorContainer,
@@ -943,7 +1048,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           colorScheme: colorScheme,
           onExtensionRequested: (int insertId) {
             log('Extension requested with InsertID: $insertId');
-            _extenstionTimer =
+            _extensionTimer =
                 Timer.periodic(const Duration(seconds: 10), (timer) {
               _fetchExtensionRequestStatus();
             });

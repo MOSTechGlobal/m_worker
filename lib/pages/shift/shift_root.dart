@@ -309,14 +309,19 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
           leading: Icon(Icons.file_copy, color: colorScheme.primary),
           title: const Text('Documents'),
           onTap: () {
-            Navigator.pop(context);
+            Navigator.pushNamed(context, '/shift_more_documents', arguments: {
+              'ClientID': shiftData['ClientID'],
+            });
           },
         ),
         ListTile(
           leading: Icon(Icons.monetization_on, color: colorScheme.primary),
           title: const Text('Expenses'),
           onTap: () {
-            Navigator.pop(context);
+            Navigator.pushNamed(context, '/shift_more_expenses', arguments: {
+              'ClientID': shiftData['ClientID'],
+              'ShiftID': shiftData['ShiftID'],
+            });
           },
         ),
         ListTile(

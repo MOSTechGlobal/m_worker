@@ -11,6 +11,7 @@ import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/drawer.dart';
 import 'package:m_worker/components/shift_tile/listTile.dart';
 import 'package:m_worker/utils/api.dart';
+import 'package:m_worker/utils/api_errors/refresh_token_error_dialog.dart';
 import 'package:m_worker/utils/prefs.dart';
 import 'package:m_worker/weather/weather_widget.dart';
 
@@ -76,6 +77,11 @@ class _HomePageState extends State<HomePage> {
     try {
       final res = await Api.get('getWorkerMasterDataByEmail/$user');
       _worker = res['data'];
+      if (_worker.isEmpty) {
+        // show error message
+        showTokenRefreshErrorDialog();
+        return;
+      }
       await Prefs.setWorkerID(_worker['WorkerID']);
       final workerShifts =
           await Api.get('getApprovedShiftsByWorkerID/${_worker['WorkerID']}');
