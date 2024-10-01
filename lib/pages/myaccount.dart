@@ -162,7 +162,7 @@ class _MyAccountState extends State<MyAccount> {
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
-        '$company/worker/$workerID/profile_picture/pfp.jpg',
+        '$company/worker/$workerID/profile_picture/pfp.png',
       );
 
       log('URL: $url');
@@ -246,7 +246,7 @@ class _MyAccountState extends State<MyAccount> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  _companyName.toString().toUpperCase() ?? '',
+                  _companyName.toString().toUpperCase(),
                   style: TextStyle(
                     fontSize: 16,
                     color: colorScheme.primary,

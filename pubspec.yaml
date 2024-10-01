@@ -68,6 +68,10 @@ dependencies:
   alarm: ^3.1.5
   fluttertoast: ^8.2.8
   audioplayers: ^6.0.0
+  flutter_form_builder:
+  pdf: ^3.11.1
+  printing: ^5.6.0
+  path_provider:
 
 dev_dependencies:
   flutter_test:

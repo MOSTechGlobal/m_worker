@@ -212,7 +212,7 @@ class mDrawer extends StatelessWidget {
       case '/documents':
         return const Documents();
       case '/availability':
-        return const Availability();
+        return const WorkerAvailability();
       case '/id_card':
         return const IdCard();
       case '/timesheets':

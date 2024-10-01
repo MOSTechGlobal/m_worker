@@ -1,7 +1,11 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'dart:developer';
 
-class mShiftTile extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
+import 'package:s3_storage/s3_storage.dart';
+
+class mShiftTile extends StatefulWidget {
   final String date;
   final Map<String, dynamic> shiftsForDate;
   final ColorScheme colorScheme;
@@ -13,9 +17,11 @@ class mShiftTile extends StatelessWidget {
       required this.colorScheme});
 
   @override
-  Widget build(BuildContext context) {
-    return _buildShiftCard(context, shiftsForDate, colorScheme);
-  }
+  State<mShiftTile> createState() => _mShiftTileState();
+}
+
+class _mShiftTileState extends State<mShiftTile> {
+  String? _pfp;
 
   String calculateShiftDuration(String shiftStart, String shiftEnd) {
     final start =
@@ -35,6 +41,40 @@ class mShiftTile extends StatelessWidget {
         : '$minutes min';
   }
 
+  void _getPfp(profilePhoto) async {
+    try {
+      final s3Storage = S3Storage(
+        endPoint: 's3.ap-southeast-2.amazonaws.com',
+        accessKey: dotenv.env['S3_ACCESS_KEY']!,
+        secretKey: dotenv.env['S3_SECRET_KEY']!,
+        region: 'ap-southeast-2',
+      );
+
+      log('########### Profile Photo: $profilePhoto');
+      final url = await s3Storage.presignedGetObject(
+        profilePhoto.toString().split('/').first,
+        profilePhoto.toString().split('/').sublist(1).join('/'),
+      );
+
+      setState(() {
+        _pfp = url;
+      });
+    } catch (e) {
+      log('Error getting profile picture: $e');
+    }
+  }
+
+  @override
+  void initState() {
+    _getPfp(widget.shiftsForDate['ClientProfilePhoto']);
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _buildShiftCard(context, widget.shiftsForDate, widget.colorScheme);
+  }
+
   Widget _buildShiftCard(
       context, Map<String, dynamic> shift, ColorScheme colorScheme) {
     return GestureDetector(
@@ -52,13 +92,22 @@ class mShiftTile extends StatelessWidget {
                   CircleAvatar(
                     radius: 30,
                     backgroundColor: colorScheme.primary,
-                    child: Text(
-                      '${shift['ClientFirstName'][0]}${shift['ClientLastName'][0]}',
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onPrimary),
-                    ),
+                    child: _pfp != null
+                        ? ClipOval(
+                            child: Image.network(
+                              _pfp!,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Text(
+                            '${shift['ClientFirstName'][0]}${shift['ClientLastName'][0]}',
+                            style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onPrimary),
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(

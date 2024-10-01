@@ -143,8 +143,8 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
       context: context,
       builder: (BuildContext context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setState) {
-            return Dialog(
+          builder: (context, StateSetter setDialogState) => Center(
+            child: Dialog(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -169,7 +169,6 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                           border: Border.all(
                               color: Theme.of(context).colorScheme.primary),
                           borderRadius: BorderRadius.circular(4),
-                          color: Theme.of(context).colorScheme.surface,
                         ),
                         child: TextButton(
                           onPressed: () async {
@@ -187,11 +186,10 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                             );
 
                             if (time != null) {
-                              setState(() {
-                                pickedStartTime =
-                                    time; // Update pickedStartTime
+                              setDialogState(() {
+                                pickedStartTime = time;
                               });
-                              log('Selected time [FROM]: ${pickedStartTime!.format(context)}'); // Log formatted time
+                              log('Selected time [FROM]: ${pickedStartTime!.format(context)}');
                             } else {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -202,8 +200,7 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                           },
                           child: Text(
                             pickedStartTime != null
-                                ? pickedStartTime!.format(
-                                    context) // Display the selected time
+                                ? pickedStartTime!.format(context)
                                 : 'Select Time',
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary),
@@ -211,7 +208,6 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
                     // Time To
                     ListTile(
                       title: Text(
@@ -224,7 +220,6 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                           border: Border.all(
                               color: Theme.of(context).colorScheme.primary),
                           borderRadius: BorderRadius.circular(4),
-                          color: Theme.of(context).colorScheme.surface,
                         ),
                         child: TextButton(
                           onPressed: () async {
@@ -242,7 +237,7 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                             );
 
                             if (time != null) {
-                              setState(() {
+                              setDialogState(() {
                                 pickedEndTime = time;
                               });
                             } else {
@@ -263,29 +258,33 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                         ),
                       ),
                     ),
+                    const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          child: const Text("Cancel"),
+                        ),
                         TextButton(
                           onPressed: () {
                             // Check if both start and end times are selected before saving
                             if (pickedStartTime != null &&
                                 pickedEndTime != null) {
                               setState(() {
-                                // Store the selected time range in the state
                                 partialAvailability[index] = [
                                   '${pickedStartTime!.hourOfPeriod.toString().padLeft(2, '0')}:${pickedStartTime!.minute.toString().padLeft(2, '0')} ${pickedStartTime!.period == DayPeriod.am ? 'AM ' : 'PM'} - ${pickedEndTime!.hourOfPeriod.toString().padLeft(2, '0')}:${pickedEndTime!.minute.toString().padLeft(2, '0')} ${pickedEndTime!.period == DayPeriod.am ? 'AM' : 'PM'}',
                                 ];
-                                availability[index] =
-                                    'As Below'; // Update availability status
+                                availability[index] = 'As Below';
                               });
-                              Navigator.pop(context); // Close the dialog
+                              Navigator.pop(context);
                               setState(() {
                                 pickedStartTime = null;
                                 pickedEndTime = null;
                               });
                             } else {
-                              // Notify the user to select both times
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content: Text(
@@ -293,21 +292,22 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                               );
                             }
                           },
-                          child: const Text("Save"),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: const Text("Cancel"),
+                          style: TextButton.styleFrom(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                          ),
+                          child: Text("Save",
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary)),
                         ),
                       ],
                     ),
                   ],
                 ),
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
@@ -505,6 +505,7 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                                             color:
                                                 Colors.white.withOpacity(0.1),
                                           ),
+                                          padding: const EdgeInsets.all(8),
                                           child: Row(
                                             mainAxisAlignment:
                                                 MainAxisAlignment.spaceEvenly,
@@ -514,12 +515,18 @@ class _WorkerAvailabilityState extends State<WorkerAvailability> {
                                                     handleAvailabilityChange(
                                                         index, 'Available'),
                                                 style: TextButton.styleFrom(
-                                                    backgroundColor: availability[
-                                                                    index]
-                                                                .toLowerCase() ==
-                                                            'available'
-                                                        ? Colors.green
-                                                        : null),
+                                                  backgroundColor: availability[
+                                                                  index]
+                                                              .toLowerCase() ==
+                                                          'available'
+                                                      ? Colors.green
+                                                      : null,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            24),
+                                                  ),
+                                                ),
                                                 child: const Text('Available',
                                                     style: TextStyle(
                                                         color: Colors.white)),

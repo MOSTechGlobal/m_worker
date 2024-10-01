@@ -109,6 +109,11 @@ class _LoginPageState extends State<LoginPage> {
         final colorScheme = Theme.of(context).colorScheme;
         return Scaffold(
           backgroundColor: colorScheme.primary,
+          appBar: AppBar(
+            backgroundColor: colorScheme.primary,
+            elevation: 0,
+            toolbarHeight: 0,
+          ),
           body: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return SingleChildScrollView(

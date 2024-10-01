@@ -10,6 +10,8 @@ import 'package:m_worker/pages/shift/sub_pages/shift_notes.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_profile.dart';
 import 'package:m_worker/utils/api.dart';
 
+import '../../components/shift_detail/shift_incident/shift_incident.dart';
+
 class ShiftRoot extends StatefulWidget {
   const ShiftRoot({super.key});
 
@@ -191,6 +193,10 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                             color: colorScheme.onSecondary),
                         onPressed: () {
                           // Handle Incident button
+                          showShiftIncident(
+                              context,
+                              shiftData['ClientID'].toString(),
+                              shiftData['SupportWorker1'].toString());
                         },
                       ),
                       Text('Incident',

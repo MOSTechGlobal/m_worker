@@ -6,12 +6,15 @@ import 'package:alarm/alarm.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:m_worker/components/button.dart';
 import 'package:m_worker/components/shift_detail/shift_extension/extend_request.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/utils/prefs.dart';
+import 'package:s3_storage/s3_storage.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
 import '../../../bloc/theme_bloc.dart';
@@ -39,8 +42,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   bool isBreakActive = false;
   Duration breakDuration = Duration.zero;
   DateTime? breakEndTime;
+  DateTime? breakStartTime;
   bool showEndShiftBtn = true;
+  int totalBreakDuration = 0;
   late StreamSubscription _alarmSubscription;
+
+  String? _pfp;
 
   bool showExtensionBtn = false;
   Map extensionData = {};
@@ -59,6 +66,90 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   Position? _endPosition;
   double _totalDistance = 0.0;
   bool _isTracking = false;
+
+  Future<void> startBreak(colorScheme) async {
+    // Fetch active break data
+    final response =
+        await Api.get('getShiftActiveBreakByShiftID/${shift['ShiftID']}');
+    if (response['data'] != null && response['data'].isNotEmpty) {
+      final activeBreak = response['data'][0];
+      final usedBreakTime = activeBreak['Duration'] ?? 0;
+      setState(() {
+        totalBreakDuration = usedBreakTime;
+      });
+    }
+
+    final remainingBreakTime =
+        breakDuration - Duration(minutes: totalBreakDuration);
+
+    if (remainingBreakTime <= Duration.zero) {
+      // Show a message that no break time is left
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: Text('No Break Time Left',
+                style: TextStyle(color: colorScheme.error)),
+            content: Text('You have used all your break time.',
+                style: TextStyle(color: colorScheme.primary)),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.errorContainer,
+                ),
+                child: Text('OK',
+                    style: TextStyle(color: colorScheme.onErrorContainer)),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    setState(() {
+      isBreakActive = true;
+      breakStartTime = DateTime.now();
+      breakEndTime = DateTime.now().add(remainingBreakTime);
+    });
+
+    await Api.post('insertShiftBreak', {
+      'ShiftID': shift['ShiftID'],
+      'BreakStartTime': DateFormat('HH:mm:ss').format(DateTime.now()),
+      'OnBreak': 1,
+    });
+
+    setAlarm(breakEndTime!);
+  }
+
+  Future<void> endBreak() async {
+    DateTime? breakEndTime = DateTime.now();
+
+    setState(() {
+      isBreakActive = false;
+      breakStartTime = null;
+      breakEndTime = null;
+    });
+
+    // Fetch the active break ID
+    final response =
+        await Api.get('getShiftActiveBreakByShiftID/${shift['ShiftID']}');
+    if (response['data'] != null && response['data'].isNotEmpty) {
+      final activeBreak = response['data'][0];
+      final breakID = activeBreak['ID'];
+
+      await Api.put('updateShiftBreak', {
+        'ID': breakID,
+        'BreakEndTime': DateFormat('HH:mm:ss').format(breakEndTime!),
+      });
+    }
+
+    await Alarm.stop(42);
+    _alarmSubscription.cancel();
+  }
 
   // Function to get current location
   Future<Position> _determinePosition() async {
@@ -153,6 +244,70 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     }
   }
 
+  @override
+  void dispose() {
+    _alarmSubscription.cancel();
+    _timer.cancel();
+    _extensionTimer.cancel();
+    player.dispose();
+    super.dispose();
+  }
+
+  void _playSuccessSound() {
+    try {
+      player.play(AssetSource('audio/approve.mp3'));
+    } catch (e) {
+      log('Error playing sound: $e');
+    } finally {
+      player.stop();
+    }
+  }
+
+  void setAlarm(DateTime dateTime) {
+    final alarmSettings = AlarmSettings(
+      id: 42,
+      dateTime: dateTime,
+      assetAudioPath: 'assets/audio/alarm.wav',
+      loopAudio: true,
+      vibrate: true,
+      volume: 0.8,
+      fadeDuration: 3.0,
+      notificationTitle: 'Break Ended',
+      notificationBody: 'Your break has ended.',
+      enableNotificationOnKill: Platform.isIOS,
+      androidFullScreenIntent: true,
+    );
+
+    Alarm.set(alarmSettings: alarmSettings);
+  }
+
+  void showBreakEndDialog(BuildContext context, colorScheme) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title:
+              Text('Break Ended', style: TextStyle(color: colorScheme.error)),
+          content: Text('Your break has ended.',
+              style: TextStyle(color: colorScheme.primary)),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                endBreak();
+                Navigator.of(context).pop();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.errorContainer,
+              ),
+              child: Text('OK',
+                  style: TextStyle(color: colorScheme.onErrorContainer)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<bool> _checkExtensionRequestExists() async {
     final response = await Api.get('getShiftExtensionDetailDataByShiftId', {
       'ShiftID': shift['ShiftID'],
@@ -200,102 +355,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         timer.cancel();
       }
     });
-  }
-
-  @override
-  void dispose() {
-    _alarmSubscription.cancel();
-    _timer.cancel();
-    _extensionTimer.cancel();
-    player.dispose();
-    super.dispose();
-  }
-
-  void _playSuccessSound() {
-    try {
-      player.play(AssetSource('audio/approve.mp3'));
-    } catch (e) {
-      log('Error playing sound: $e');
-    } finally {
-      player.stop();
-    }
-  }
-
-  Future<void> startBreak(colorScheme) async {
-    setState(() {
-      isBreakActive = true;
-      breakEndTime = DateTime.now().add(breakDuration);
-    });
-
-    await Api.put('putShiftBreak', {
-      'ShiftID': shift['ShiftID'],
-      'BreakStart': // time when break started
-          DateFormat('HH:mm:ss').format(DateTime.now()),
-      'onBreak': 1,
-    });
-
-    setAlarm(breakEndTime!);
-  }
-
-  Future<void> endBreak() async {
-    setState(() {
-      isBreakActive = false;
-      breakDuration = Duration.zero;
-      breakEndTime = null;
-    });
-
-    await Api.put('putShiftBreak', {
-      'ShiftID': shift['ShiftID'],
-      'onBreak': 0,
-    });
-
-    await Alarm.stop(42);
-    _alarmSubscription.cancel();
-  }
-
-  void setAlarm(DateTime dateTime) {
-    final alarmSettings = AlarmSettings(
-      id: 42,
-      dateTime: dateTime,
-      assetAudioPath: 'assets/audio/alarm.wav',
-      loopAudio: true,
-      vibrate: true,
-      volume: 0.8,
-      fadeDuration: 3.0,
-      notificationTitle: 'Break Ended',
-      notificationBody: 'Your break has ended.',
-      enableNotificationOnKill: Platform.isIOS,
-      androidFullScreenIntent: true,
-    );
-
-    Alarm.set(alarmSettings: alarmSettings);
-  }
-
-  void showBreakEndDialog(BuildContext context, colorScheme) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title:
-              Text('Break Ended', style: TextStyle(color: colorScheme.error)),
-          content: Text('Your break has ended.',
-              style: TextStyle(color: colorScheme.primary)),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                endBreak();
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.errorContainer,
-              ),
-              child: Text('OK',
-                  style: TextStyle(color: colorScheme.onErrorContainer)),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future<void> _fetchClientData({required int clientID}) async {
@@ -377,6 +436,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
       setState(() {
         shift.addAll(response['data'][0]);
       });
+      _getPfp(shift['ClientProfilePhoto']);
       setState(() {
         breakDuration = shift['BreakDuration'] != null
             ? Duration(minutes: shift['BreakDuration'])
@@ -389,11 +449,31 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           breakEndTime = breakEnd;
         }
       });
-      log('$breakDuration');
-      log('Break active: $isBreakActive');
-      log('Break end time: $breakEndTime');
-      log('Shift data fetched successfully: $shift');
     });
+  }
+
+  void _getPfp(profilePhoto) async {
+    try {
+      final s3Storage = S3Storage(
+        endPoint: 's3.ap-southeast-2.amazonaws.com',
+        accessKey: dotenv.env['S3_ACCESS_KEY']!,
+        secretKey: dotenv.env['S3_SECRET_KEY']!,
+        region: 'ap-southeast-2',
+      );
+
+      final url = await s3Storage.presignedGetObject(
+        profilePhoto.toString().split('/').first,
+        profilePhoto.toString().split('/').sublist(1).join('/'),
+      );
+
+      log('URL: $url');
+
+      setState(() {
+        _pfp = url;
+      });
+    } catch (e) {
+      log('Error getting profile picture: $e');
+    }
   }
 
   Future<void> _makeTimeSheetEntry(shift) async {
@@ -564,13 +644,20 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                     ? CircleAvatar(
                         radius: 50,
                         backgroundColor: colorScheme.primary,
-                        child: Text(
-                          '${shift['ClientFirstName'][0] ?? ''}${shift['ClientLastName'][0] ?? ''}',
-                          style: TextStyle(
-                              fontSize: 50,
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onPrimary),
-                        ),
+                        child: _pfp != null
+                            ? ClipOval(
+                                child: Image.network(
+                                  _pfp!,
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.person,
+                                size: 50,
+                                color: Colors.white,
+                              ),
                       )
                     : const SizedBox.shrink(),
                 const SizedBox(height: 20),
@@ -781,7 +868,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                     ),
                   ),
                 ],
-                if (shift['ShiftStatus'] == 'In Progress' &&
+                if (shift['ShiftStatus'] == null &&
                     Duration(minutes: shift['BreakDuration'] ?? 0) >
                         Duration.zero &&
                     !isBreakActive &&
@@ -790,28 +877,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24.0, vertical: 12.0),
-                    child: SlideAction(
-                      onSubmit: () async {
-                        await startBreak(colorScheme);
+                    child: MButton(
+                      label: 'Start Break',
+                      colorScheme: colorScheme,
+                      onPressed: () {
+                        startBreak(colorScheme);
                       },
-                      text: 'Start Break',
-                      borderRadius: 12,
-                      elevation: 0,
-                      innerColor: colorScheme.onTertiaryContainer,
-                      outerColor: colorScheme.tertiaryContainer,
-                      textStyle: TextStyle(
-                        color: colorScheme.primary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      sliderButtonIconSize: 20,
-                      height: 55,
-                      sliderButtonIconPadding: 10,
-                      sliderButtonIcon: Icon(
-                        Icons.arrow_forward,
-                        color: colorScheme.onPrimary,
-                        size: 20,
-                      ),
                     ),
                   ),
                 if (isBreakActive)

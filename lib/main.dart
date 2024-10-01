@@ -85,7 +85,7 @@ class MyApp extends StatelessWidget {
               '/training_qualification': (context) =>
                   const TrainingQualification(),
               '/documents': (context) => const Documents(),
-              '/availability': (context) => const Availability(),
+              '/availability': (context) => const WorkerAvailability(),
               '/id_card': (context) => const IdCard(),
               '/timesheets': (context) => const Timesheets(),
               '/end_shift': (context) => const EndShift(),

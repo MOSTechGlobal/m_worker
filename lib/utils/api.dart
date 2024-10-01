@@ -9,7 +9,7 @@ import 'api_errors/refresh_token_error_dialog.dart';
 
 class Api {
   static const String baseUrl =
-      'https://afa5-202-94-161-2.ngrok-free.app'; // https://moscare-api-master.vercel.app //http://192.168.0.110:5001
+      'http://192.168.0.110:5001'; // https://moscare-api-master.vercel.app //http://192.168.0.110:5001
   static bool _isRefreshing = false; // Flag to track token refresh attempts
 
   static Future<String?> _refreshToken() async {

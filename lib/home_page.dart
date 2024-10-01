@@ -164,6 +164,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context, state) {
         final colorScheme = Theme.of(context).colorScheme;
         return Scaffold(
+          backgroundColor: colorScheme.surface,
           body: SliderDrawer(
             key: const ValueKey('slider_drawer'),
             appBar: SliderAppBar(
@@ -178,6 +179,11 @@ class _HomePageState extends State<HomePage> {
               appBarHeight: 80,
               appBarPadding: const EdgeInsets.only(right: 12, top: 24),
               drawerIconColor: colorScheme.secondary,
+            ),
+            sliderBoxShadow: SliderBoxShadow(
+              color: colorScheme.secondary.withOpacity(0.2),
+              spreadRadius: 0,
+              blurRadius: 10,
             ),
             slider: mDrawer(
               colorScheme: colorScheme,
@@ -241,7 +247,7 @@ class _HomePageState extends State<HomePage> {
                             ButtonSegment(
                                 value: 'Fortnight',
                                 label: Text('Fortnight',
-                                    style: TextStyle(fontSize: 14))),
+                                    style: TextStyle(fontSize: 12))),
                           ],
                           selected: _selectedSegment,
                           onSelectionChanged: (Set<String> newSelection) {
@@ -342,7 +348,6 @@ class _HomePageState extends State<HomePage> {
                                         ],
                                       );
                                     }
-                                    return null;
                                   },
                                 ),
                               ),
