@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:alarm/alarm.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -19,6 +21,7 @@ import 'package:slide_to_act/slide_to_act.dart';
 
 import '../../../bloc/theme_bloc.dart';
 import '../../../components/shift_detail/shift_detail_3rd_card.dart';
+import '../../../main.dart';
 
 class ShiftDetails extends StatefulWidget {
   final Map<dynamic, dynamic> shift;
@@ -310,7 +313,62 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     _alarmStopTimer = Timer(const Duration(minutes: 5), () {
       player.stop();
       Alarm.stop(42);
+
+      _showStopAlarmNotification('Break Ended', 'Your break has ended.');
     });
+  }
+
+  // Function to show a notification when the alarm is about to stop
+  Future<void> _showStopAlarmNotification(String? title, String? body) async {
+    AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'm-w-bg', // Replace with your channel ID
+      'Mostech Notifs', // Replace with your channel name
+      channelDescription:
+          'General Channel to get Notifs', // Replace with your channel description
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      showWhen: false,
+      // Define actions
+      additionalFlags:
+          Int32List.fromList([1]), // Necessary for Android 8.0 and above
+      styleInformation: const DefaultStyleInformation(true, true),
+      // Set up notification actions
+      actions: [
+        const AndroidNotificationAction(
+          'stop_alarm', // Action ID
+          'Stop', // Action Label
+        ),
+      ],
+    );
+
+    NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      title,
+      body,
+      platformChannelSpecifics,
+    );
+
+    // Handle the actions when the notification is tapped
+    _setupNotificationActionHandlers();
+  }
+
+// Set up handlers for the notification actions
+  void _setupNotificationActionHandlers() {
+    flutterLocalNotificationsPlugin.initialize(
+      const InitializationSettings(
+          android: AndroidInitializationSettings('@mipmap/ic_launcher')),
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        if (response.payload == 'stop_alarm') {
+          player.stop();
+          Alarm.stop(42);
+        }
+      },
+    );
   }
 
   Future<void> showBreakEndDialog(

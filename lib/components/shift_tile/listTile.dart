@@ -84,6 +84,14 @@ class _mShiftTileState extends State<mShiftTile> {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Card(
+          borderOnForeground: true,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: shift['ShiftStatus'] == 'In Progress' ? Colors.amber : shift['ShiftStatus'].toString().contains('Completed') ? Colors.green : Colors.transparent,
+              width: 2,
+            ),
+          ),
           color: colorScheme.secondaryContainer,
           child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
