@@ -4,8 +4,7 @@ import 'package:m_worker/main.dart';
 
 import '../../bloc/theme_bloc.dart';
 
-Future<void> showNotificationDialog(title, body, data) async {
-  final context = navigatorKey.currentState!.overlay!.context;
+Future<void> showNotificationDialog(title, body, data, context) async {
   showDialog(
     context: context,
     builder: (context) {

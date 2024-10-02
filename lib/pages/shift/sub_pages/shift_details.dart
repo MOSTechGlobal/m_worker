@@ -46,6 +46,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   bool showEndShiftBtn = true;
   int totalBreakDuration = 0;
   late StreamSubscription _alarmSubscription;
+  late Timer _alarmStopTimer;
 
   String? _pfp;
 
@@ -67,15 +68,36 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   double _totalDistance = 0.0;
   bool _isTracking = false;
 
-  Future<void> startBreak(colorScheme) async {
-    // Fetch active break data
+  Future<void> _fetchIsOnBreak() async {
     final response =
         await Api.get('getShiftActiveBreakByShiftID/${shift['ShiftID']}');
     if (response['data'] != null && response['data'].isNotEmpty) {
       final activeBreak = response['data'][0];
-      final usedBreakTime = activeBreak['Duration'] ?? 0;
+      final onBreak = activeBreak['OnBreak'];
+      if (onBreak == 1) {
+        setState(() {
+          isBreakActive = true;
+          breakEndTime = DateTime.parse(activeBreak['BreakStartTime'])
+              .toLocal()
+              .add(Duration(minutes: breakDuration.inMinutes));
+        });
+      }
+    } else {
       setState(() {
-        totalBreakDuration = usedBreakTime;
+        isBreakActive = false;
+        breakStartTime = null;
+        breakEndTime = null;
+      });
+    }
+  }
+
+  Future<void> startBreak(colorScheme) async {
+    final response =
+        await Api.get('getTotalBreakTimeByShiftID/${shift['ShiftID']}');
+    if (response['data'] != null && response['data'].isNotEmpty) {
+      final activeBreak = response['data'][0];
+      setState(() {
+        totalBreakDuration = activeBreak['TotalBreakTime'] ?? 0;
       });
     }
 
@@ -83,7 +105,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         breakDuration - Duration(minutes: totalBreakDuration);
 
     if (remainingBreakTime <= Duration.zero) {
-      // Show a message that no break time is left
       showDialog(
         context: context,
         builder: (context) {
@@ -118,7 +139,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
 
     await Api.post('insertShiftBreak', {
       'ShiftID': shift['ShiftID'],
-      'BreakStartTime': DateFormat('HH:mm:ss').format(DateTime.now()),
+      'BreakStartTime': breakStartTime?.toLocal().toString(),
       'OnBreak': 1,
     });
 
@@ -126,15 +147,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   }
 
   Future<void> endBreak() async {
-    DateTime? breakEndTime = DateTime.now();
+    DateTime currentBreakEndTime = DateTime.now();
 
-    setState(() {
-      isBreakActive = false;
-      breakStartTime = null;
-      breakEndTime = null;
-    });
-
-    // Fetch the active break ID
     final response =
         await Api.get('getShiftActiveBreakByShiftID/${shift['ShiftID']}');
     if (response['data'] != null && response['data'].isNotEmpty) {
@@ -143,12 +157,21 @@ class _ShiftDetailsState extends State<ShiftDetails> {
 
       await Api.put('updateShiftBreak', {
         'ID': breakID,
-        'BreakEndTime': DateFormat('HH:mm:ss').format(breakEndTime!),
+        'BreakEndTime': currentBreakEndTime.toLocal().toString(),
+        'ShiftID': shift['ShiftID'],
       });
     }
 
+    setState(() {
+      isBreakActive = false;
+      breakStartTime = null;
+      breakEndTime = null;
+    });
+
     await Alarm.stop(42);
+    player.stop();
     _alarmSubscription.cancel();
+    _alarmStopTimer.cancel();
   }
 
   // Function to get current location
@@ -214,13 +237,11 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         totalDistanceKm = _totalDistance / 1000;
       });
     }
-    log('Total Distance: $totalDistanceKm');
   }
 
   @override
   void initState() {
     super.initState();
-    log('Shift Details: ${widget.shift}');
     shift.clear();
     shift.addAll(widget.shift);
     _fetchClientData(clientID: shift['ClientID']);
@@ -229,6 +250,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     _initAlarm();
     _checkExtensionBtn();
     _fetchExtensionRequestStatus();
+    _fetchIsOnBreak();
     player.setReleaseMode(ReleaseMode.stop);
   }
 
@@ -237,7 +259,9 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     if (!alreadySubscribed) {
       _alarmSubscription = Alarm.ringStream.stream.listen((event) {
         if (event.id == 42) {
-          showBreakEndDialog(context, Theme.of(context).colorScheme);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showBreakEndDialog(context, Theme.of(context).colorScheme);
+          });
         }
       });
       Prefs.setAlarmSubscribed(true);
@@ -279,33 +303,45 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     );
 
     Alarm.set(alarmSettings: alarmSettings);
+    _scheduleAlarmStop();
   }
 
-  void showBreakEndDialog(BuildContext context, colorScheme) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title:
-              Text('Break Ended', style: TextStyle(color: colorScheme.error)),
-          content: Text('Your break has ended.',
-              style: TextStyle(color: colorScheme.primary)),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                endBreak();
-                Navigator.of(context).pop();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.errorContainer,
+  void _scheduleAlarmStop() {
+    _alarmStopTimer = Timer(const Duration(minutes: 5), () {
+      player.stop();
+      Alarm.stop(42);
+    });
+  }
+
+  Future<void> showBreakEndDialog(
+      BuildContext context, ColorScheme colorScheme) async {
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title:
+                Text('Break Ended', style: TextStyle(color: colorScheme.error)),
+            content: Text('Your break has ended.',
+                style: TextStyle(color: colorScheme.primary)),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  // End the break and close the dialog
+                  endBreak();
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.errorContainer,
+                ),
+                child: Text('OK',
+                    style: TextStyle(color: colorScheme.onErrorContainer)),
               ),
-              child: Text('OK',
-                  style: TextStyle(color: colorScheme.onErrorContainer)),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    }
   }
 
   Future<bool> _checkExtensionRequestExists() async {
@@ -441,13 +477,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         breakDuration = shift['BreakDuration'] != null
             ? Duration(minutes: shift['BreakDuration'])
             : Duration.zero;
-        isBreakActive = shift['onBreak'] == 1;
-        if (isBreakActive) {
-          final breakStart = DateFormat('HH:mm:ss').parse(shift['BreakStart']);
-          final breakEnd =
-              breakStart.add(Duration(minutes: breakDuration.inMinutes));
-          breakEndTime = breakEnd;
-        }
       });
     });
   }
@@ -572,7 +601,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             extensionData.addAll(response['data'][0]);
           });
           if (extensionData['Status'] == 'A') {
-            _extensionTimer.cancel(); // Stop polling when status is 'A'
+            _extensionTimer?.cancel(); // Stop polling when status is 'A'
             // todo fix sound
             _playSuccessSound();
           }
@@ -581,7 +610,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         log('No extension data found for ShiftID: ${shift['ShiftID']}');
         if (mounted) {
           setState(() {
-            _extensionTimer.cancel();
+            _extensionTimer?.cancel();
           });
         }
         log('Extension status polling stopped');
@@ -746,9 +775,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     if (showExtensionBtn) const SizedBox(width: 60),
-                    if (shift['ShiftStatus'] == 'In Progress' &&
-                        !DateTime.now()
-                            .isAfter(DateTime.parse(shift['ShiftEnd'])))
+                    if (shift['ShiftStatus'] == 'In Progress')
                       showEndShiftBtn
                           ? Container(
                               margin:
@@ -868,12 +895,14 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                     ),
                   ),
                 ],
-                if (shift['ShiftStatus'] == null &&
+                const SizedBox(height: 10),
+                if (shift['ShiftStatus'] == 'In Progress' &&
                     Duration(minutes: shift['BreakDuration'] ?? 0) >
                         Duration.zero &&
                     !isBreakActive &&
                     (breakEndTime == null ||
-                        breakEndTime!.isBefore(DateTime.now())))
+                        breakEndTime!.isBefore(DateTime.now())) &&
+                    !DateTime.now().isAfter(DateTime.parse(shift['ShiftEnd'])))
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24.0, vertical: 12.0),
@@ -896,6 +925,11 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                             'Break Until: ${DateFormat('hh:mm aa').format(breakEndTime!)}',
                             style: TextStyle(
                                 color: colorScheme.onSurface, fontSize: 16),
+                          ),
+                          Text(
+                            'You have ${breakDuration.inMinutes - totalBreakDuration} minutes left',
+                            style: TextStyle(
+                                color: colorScheme.onSurface, fontSize: 12),
                           ),
                           const SizedBox(height: 10),
                           ElevatedButton(
