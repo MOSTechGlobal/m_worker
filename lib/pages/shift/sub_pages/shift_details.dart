@@ -299,11 +299,16 @@ class _ShiftDetailsState extends State<ShiftDetails> {
       vibrate: true,
       volume: 0.8,
       fadeDuration: 3.0,
-      notificationTitle: 'Break Ended',
-      notificationBody: 'Your break has ended.',
       enableNotificationOnKill: Platform.isIOS,
       androidFullScreenIntent: true,
+      notificationTitle: 'Break Ended',
+      notificationBody: 'Your break has ended.',
     );
+    Alarm.isRinging(42).then((value) {
+      if (value == true) {
+        _showStopAlarmNotification('Stop Alarm', 'Your break has ended.');
+      }
+    });
 
     Alarm.set(alarmSettings: alarmSettings);
     _scheduleAlarmStop();
@@ -313,8 +318,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     _alarmStopTimer = Timer(const Duration(minutes: 5), () {
       player.stop();
       Alarm.stop(42);
-
-      _showStopAlarmNotification('Break Ended', 'Your break has ended.');
     });
   }
 
@@ -364,8 +367,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           android: AndroidInitializationSettings('@mipmap/ic_launcher')),
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         if (response.payload == 'stop_alarm') {
-          player.stop();
-          Alarm.stop(42);
+          log('Alarm stopped');
+          endBreak();
         }
       },
     );
