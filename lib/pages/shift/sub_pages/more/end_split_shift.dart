@@ -276,14 +276,12 @@ class _EndSplitShiftState extends State<EndSplitShift> {
   Future<void> _timesheetDetails() async {
     log('Updating timesheet details');
     for (int i = 0; i < _kmNoteControllers.length; i++) {
-      final endTime = DateTime.now().toIso8601String().substring(11, 19);
       final data = {
         'ShiftId': shift['ShiftID'],
         'ServiceCode': splitShift['s${i + 1}_service_code'],
         'Km': _kmNoteControllers[i].text,
         'TravelNote': _travelNoteControllers[i].text,
         'WorkerRemarks': _timeSheetRemarksControllers[i].text,
-        'ActualEndTime': endTime,
         'ActualKm': actualKm,
         'ExtendedMinutes': _extendedMinutesController.text,
       };

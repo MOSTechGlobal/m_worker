@@ -20,6 +20,7 @@ class _TimesheetsState extends State<Timesheets> {
   DateTime selectedDate = DateTime.now();
   bool _isLoading = false;
   List<Map<String, dynamic>> shifts = [];
+  List<Map<String, dynamic>> splitShifts = [];
   Map<DateTime, Map<String, String>> shiftStatuses = {};
 
   bool isEditMode = false;
@@ -47,6 +48,7 @@ class _TimesheetsState extends State<Timesheets> {
   }
 
   Future<void> _fetchShifts() async {
+    _showLoadingDialog(context, message: 'Fetching shifts...');
     setState(() {
       _isLoading = true;
     });
@@ -66,14 +68,14 @@ class _TimesheetsState extends State<Timesheets> {
 
       final res = await Api.post('getTimesheetDetailDataByWorkerId', data);
       if (res['success']) {
-        setState(() {
+        setState(() async {
           shifts = List<Map<String, dynamic>>.from(res['data']);
+          log('Shifts fetched: ${shifts.toString()}');
           for (var shift in res['data']) {
             DateTime shiftDate = DateFormat('yyyy-MM-dd')
                 .parse(shift['ShiftStartDate'], true)
                 .toLocal();
 
-            // Normalize the date to ensure consistent comparisons (setting time to 00:00:00)
             shiftDate =
                 DateTime(shiftDate.year, shiftDate.month, shiftDate.day);
 
@@ -91,6 +93,11 @@ class _TimesheetsState extends State<Timesheets> {
                 existingStatuses?['RmStatus'] = shift['RmStatus'];
               }
             }
+            final re = await Api.get('doesShiftSplitExist/${shift['ShiftId']}');
+            final splitExists = re['success'] && re['data'] == 1;
+            if (splitExists) {
+              _fetchSplitShifts(shift['ShiftId']);
+            }
           }
 
           _initializeControllers();
@@ -104,6 +111,58 @@ class _TimesheetsState extends State<Timesheets> {
       setState(() {
         _isLoading = false;
       });
+      Navigator.of(context).pop();
+    }
+  }
+
+  void _showLoadingDialog(BuildContext context, {String? message}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return WillPopScope(
+          onWillPop: () async => false,
+          child: AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 50),
+                if (message != null)
+                  Text(message,
+                      style: TextStyle(
+                          fontSize: 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(.5))),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _fetchSplitShifts(shiftId) async {
+    try {
+      final workerID = await Prefs.getWorkerID();
+      if (workerID == null) {
+        log('Worker ID not found');
+        return;
+      }
+
+      final res = await Api.get('checkIfSplitShiftExists/$shiftId');
+      if (res['success']) {
+        setState(() {
+          splitShifts.addAll(List<Map<String, dynamic>>.from(res['data']));
+          log('Split shifts fetched: ${splitShifts.toString()}');
+        });
+      } else {
+        log('Error fetching split shifts: ${res['message']}');
+      }
+    } catch (e) {
+      log('Error fetching split shifts: $e');
     }
   }
 
@@ -210,6 +269,7 @@ class _TimesheetsState extends State<Timesheets> {
       final data = {
         "TsId": shift['TsId'],
         "ShiftId": shift['ShiftId'],
+        'ServiceCode': shift['ServiceCode'],
         "ShiftHrs": _hrControllers[shiftIndex]?.text ?? '0',
         "Km": _kmControllers[shiftIndex]?.text ?? '0',
         "UpdateBy": updatedBy,
@@ -241,6 +301,7 @@ class _TimesheetsState extends State<Timesheets> {
   }
 
   Future<void> _submitBtn() async {
+    _showLoadingDialog(context, message: 'Submitting timesheet...');
     final now = DateTime.now();
     // if today is not the week end day
     if (now.weekday != 7 && now.weekday != 6) {
@@ -301,8 +362,6 @@ class _TimesheetsState extends State<Timesheets> {
         }
       } catch (e) {
         log('Error saving shift data: $e');
-      } finally {
-        _fetchShifts();
       }
     }
     if (count == weekShifts.length) {
@@ -314,6 +373,7 @@ class _TimesheetsState extends State<Timesheets> {
             '${DateFormat('dd/MM/yyyy').format(weekStart)} - ${DateFormat('dd/MM/yyyy').format(weekEnd)} '
             ' has been submitted by $email',
       });
+      Navigator.of(context).pop();
       showDialog(
           context: context,
           builder: (context) {

@@ -639,7 +639,8 @@ class _ShiftSplitDetailsState extends State<ShiftSplitDetails> {
               DateTime.parse(splitShift['StartTime']).toLocal().toString(),
           'ShiftEndDate':
               DateTime.parse(splitShift['EndTime']).toLocal().toString(),
-          'ActualStartTime': DateTime.now().toLocal().toString(),
+          'ActualStartTime':
+              DateTime.parse(splitShift['StartTime']).toLocal().toString(),
           'PayRate': splitShift['PayRate'],
           'ChargeRate': splitShift['ChargeRate'],
           'RecStatus': 'O',
