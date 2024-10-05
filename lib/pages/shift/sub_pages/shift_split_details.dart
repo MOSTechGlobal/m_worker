@@ -12,7 +12,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import 'package:m_worker/components/button.dart';
 import 'package:m_worker/components/shift_detail/shift_extension/extend_request.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/utils/prefs.dart';
@@ -20,26 +19,28 @@ import 'package:s3_storage/s3_storage.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
 import '../../../bloc/theme_bloc.dart';
+import '../../../components/button.dart';
 import '../../../components/shift_detail/shift_detail_3rd_card.dart';
 import '../../../main.dart';
 
-class ShiftDetails extends StatefulWidget {
+class ShiftSplitDetails extends StatefulWidget {
   final Map<dynamic, dynamic> shift;
   final ValueChanged<String> onStatusChanged;
 
-  const ShiftDetails(
+  const ShiftSplitDetails(
       {super.key, required this.shift, required this.onStatusChanged});
 
   @override
-  State<ShiftDetails> createState() => _ShiftDetailsState();
+  State<ShiftSplitDetails> createState() => _ShiftSplitDetailsState();
 
   void fetchExtensionRequestStatus(int extensionId) {
-    _ShiftDetailsState()._fetchExtensionRequestStatus();
+    _ShiftSplitDetailsState()._fetchExtensionRequestStatus();
   }
 }
 
-class _ShiftDetailsState extends State<ShiftDetails> {
+class _ShiftSplitDetailsState extends State<ShiftSplitDetails> {
   Map shift = {};
+  Map splitShift = {};
   Map clientData = {};
   Map workerData = {};
   bool isBreakActive = false;
@@ -250,6 +251,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     _fetchClientData(clientID: shift['ClientID']);
     _fetchWorkerData();
     _fetchShiftData(shift['ShiftID']);
+    log('Shift Data: $shift');
     _initAlarm();
     _checkExtensionBtn();
     _fetchExtensionRequestStatus();
@@ -428,11 +430,12 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         });
         timer.cancel();
 
-        // End shift if no extension request is made
-        if (extensionData.isEmpty) {
-          await _changeShiftStatus('Completed', shift['ShiftID'],
-              reason: 'Shift ended late by ${duration.inMinutes} minutes');
-        }
+        // send notification to TL
+        await Api.post('sendNotificationToID', {
+          "id": "us_${clientData['CaseManager']}",
+          "title": "Shift has ended",
+          "body": "Shift has ended late by ${duration.inMinutes} minutes",
+        });
       } else if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15))) &&
           !showExtensionBtn) {
         setState(() {
@@ -529,6 +532,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   }
 
   Future<void> _fetchShiftData(shiftID) async {
+    log('Fetching shift data for ShiftID: $shiftID');
     Api.get('getApprovedShifts/$shiftID').then((response) {
       setState(() {
         shift.addAll(response['data'][0]);
@@ -540,6 +544,21 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             : Duration.zero;
       });
     });
+    _fetchSplitShiftData();
+  }
+
+  Future<void> _fetchSplitShiftData() async {
+    log('Fetching split shift data for ShiftID: ${shift['ShiftID']}');
+    final response = await Api.get(
+        'getShiftSplitDataByID/206'); // todo change to shift['ShiftID']
+    if (response['data'] != null && response['data'].isNotEmpty) {
+      setState(() {
+        splitShift.clear();
+        splitShift.addAll(response['data'][0]);
+      });
+    } else {
+      log('No split shift data found for ShiftID: ${shift['ShiftID']}');
+    }
   }
 
   void _getPfp(profilePhoto) async {
@@ -566,35 +585,73 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     }
   }
 
-  Future<void> _makeTimeSheetEntry(shift) async {
+  Future<void> _makeTimeSheetEntry() async {
     final workerID = await Prefs.getWorkerID();
 
-    final data = {
-      'ShiftId': shift['ShiftID'],
-      'ServiceCode': shift['ServiceCode'],
-      'ClientId': shift['ClientID'],
-      'TlId': clientData['CaseManager'],
-      'TlRemarks':
-          workerID == clientData['CaseManager'] ? 'Worker is TL' : null,
-      'TlStatus': workerID == clientData['CaseManager'] ? 'A' : 'U',
-      'RmId': clientData['CaseManager2'],
-      'RmRemarks': null,
-      'RmStatus': 'U',
-      'WorkerRemarks': null,
-      'ShiftStartDate':
-          DateTime.parse(shift['ShiftStart']).toLocal().toString(),
-      'ShiftEndDate': DateTime.parse(shift['ShiftEnd']).toLocal().toString(),
-      'ActualStartTime': DateTime.now().toLocal().toString(),
-      'PayRate': shift['PayRate'],
-      'ChargeRate': shift['ChargeRate'],
-      'RecStatus': 'O',
-      'workerID': workerID,
-    };
+    // List of split shifts
+    final splitShifts = [
+      {
+        'ServiceCode': splitShift['s1_service_code'],
+        'ChargeRate': splitShift['s1_charge_rate'],
+        'PayRate': splitShift['s1_pay_rate'],
+        'StartTime': splitShift['s1_start_time'],
+        'EndTime': splitShift['s1_end_time'],
+      },
+      {
+        'ServiceCode': splitShift['s2_service_code'],
+        'ChargeRate': splitShift['s2_charge_rate'],
+        'PayRate': splitShift['s2_pay_rate'],
+        'StartTime': splitShift['s2_start_time'],
+        'EndTime': splitShift['s2_end_time'],
+      },
+      {
+        'ServiceCode': splitShift['s3_service_code'],
+        'ChargeRate': splitShift['s3_charge_rate'],
+        'PayRate': splitShift['s3_pay_rate'],
+        'StartTime': splitShift['s3_start_time'],
+        'EndTime': splitShift['s3_end_time'],
+      },
+      {
+        'ServiceCode': splitShift['s4_service_code'],
+        'ChargeRate': splitShift['s4_charge_rate'],
+        'PayRate': splitShift['s4_pay_rate'],
+        'StartTime': splitShift['s4_start_time'],
+        'EndTime': splitShift['s4_end_time'],
+      },
+    ];
 
-    try {
-      await Api.post('/insertTimesheetDetailData', data);
-    } catch (e) {
-      log('TS Entry API Error: $e');
+    for (var splitShift in splitShifts) {
+      log('Split Shift TS entry: $splitShift');
+      if (splitShift['ServiceCode'] != null) {
+        final data = {
+          'ShiftId': shift['ShiftID'],
+          'ServiceCode': splitShift['ServiceCode'],
+          'ClientId': shift['ClientID'],
+          'TlId': clientData['CaseManager'],
+          'TlRemarks':
+              workerID == clientData['CaseManager'] ? 'Worker is TL' : null,
+          'TlStatus': workerID == clientData['CaseManager'] ? 'A' : 'U',
+          'RmId': clientData['CaseManager2'],
+          'RmRemarks': null,
+          'RmStatus': 'U',
+          'WorkerRemarks': null,
+          'ShiftStartDate':
+              DateTime.parse(splitShift['StartTime']).toLocal().toString(),
+          'ShiftEndDate':
+              DateTime.parse(splitShift['EndTime']).toLocal().toString(),
+          'ActualStartTime': DateTime.now().toLocal().toString(),
+          'PayRate': splitShift['PayRate'],
+          'ChargeRate': splitShift['ChargeRate'],
+          'RecStatus': 'O',
+          'workerID': workerID,
+        };
+
+        try {
+          await Api.post('/insertTimesheetDetailData', data);
+        } catch (e) {
+          log('TS Entry API Error: $e');
+        }
+      }
     }
   }
 
@@ -603,7 +660,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     String status;
     if (type == 'start') {
       status = 'In Progress';
-      await _makeTimeSheetEntry(shift);
+      await _makeTimeSheetEntry();
+      _startTracking();
     } else if (type == 'end') {
       final shiftEnd = DateTime.parse(shift['ShiftEnd']);
       final now = DateTime.now();
@@ -642,8 +700,6 @@ class _ShiftDetailsState extends State<ShiftDetails> {
     } catch (e) {
       log('Error changing shift status: $e');
     }
-
-    _startTracking();
   }
 
   Future<void> _fetchExtensionRequestStatus() async {
@@ -712,7 +768,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              '- (idk)',
+                              '- (idk) SPLIT',
                               style: TextStyle(
                                   color: colorScheme.onPrimaryContainer),
                             ),
@@ -798,6 +854,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                 //     ),
                 //   ),
                 if ((shift['ShiftStatus'] == 'Not Started' ||
+                        shift['ShiftStatus'] == 'Scheduled' ||
                         shift['ShiftStatus'] == 'Confirmed') &&
                     DateTime.now().day ==
                         DateTime.parse(shift['ShiftStart']).day)
@@ -887,8 +944,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                       ),
                     ],
                   ],
-                ),
-                //if extension data exists
+                ), //if extension data exists
                 if (extensionData.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Card(
@@ -1007,117 +1063,33 @@ class _ShiftDetailsState extends State<ShiftDetails> {
                     ),
                   ),
                 const SizedBox(height: 10),
-                Card(
-                  elevation: 0,
-                  color: colorScheme.secondaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                // show the split shift details all 4 if exists
+                // in the form of 4 expansion tiles
+                if (splitShift.isNotEmpty) ...[
+                  if (splitShift.isNotEmpty) ...[
+                    for (int i = 1; i <= 4; i++)
+                      if (splitShift.containsKey('s${i}_service_code')) ...[
+                        ExpansionTile(
+                          backgroundColor: colorScheme.secondaryContainer,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          collapsedBackgroundColor:
+                              colorScheme.secondaryContainer,
+                          collapsedShape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          title: Text(
+                              '$i) ${DateFormat('hh:mm aa').format(DateTime.parse(splitShift['s${i}_start_time']).toLocal())} '),
                           children: [
-                            Text(
-                              'Shift Date: ',
-                              style: TextStyle(
-                                  color: colorScheme.onSurface, fontSize: 16),
-                            ),
-                            Text(
-                              DateFormat('dd/MM/yyyy')
-                                  .format(DateTime.parse(shift['ShiftStart'])),
-                              style: TextStyle(
-                                  color: colorScheme.primary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
+                            _buildSplitShiftDetails(splitShift, i, colorScheme),
                           ],
                         ),
                         const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Column(
-                              children: [
-                                Text(
-                                  'Start Time',
-                                  style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 14),
-                                ),
-                                Text(
-                                  DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftStart'])
-                                          .toUtc()
-                                          .toLocal()),
-                                  style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'End Time',
-                                  style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 14),
-                                ),
-                                Text(
-                                  DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftEnd'])
-                                          .toUtc()
-                                          .toLocal()),
-                                  style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'Duration',
-                                  style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 14),
-                                ),
-                                Text(
-                                  calculateShiftDuration(
-                                      shift['ShiftStart'], shift['ShiftEnd']),
-                                  style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              children: [
-                                Text(
-                                  'Break',
-                                  style: TextStyle(
-                                      color: colorScheme.onSurface,
-                                      fontSize: 14),
-                                ),
-                                Text(
-                                  '${shift['BreakDuration'] ?? 0} min',
-                                  style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
                       ],
-                    ),
-                  ),
-                ),
+                  ],
+                ],
+
                 const SizedBox(height: 10),
                 Card(
                   elevation: 0,
@@ -1179,16 +1151,21 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await _stopTracking();
+                try {
+                  await _stopTracking();
+                } catch (e) {
+                  log('Error stopping tracking: $e');
+                }
                 final args = {
                   'shift': shift,
                   'worker': workerData,
                   'KM': totalDistanceKm,
+                  'splitShift': splitShift,
                 };
                 if (mounted) {
                   Navigator.of(context).pop();
                   Navigator.of(context)
-                      .pushNamed('/end_shift', arguments: args);
+                      .pushNamed('/end_split_shift', arguments: args);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -1221,6 +1198,33 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildSplitShiftDetails(
+      Map splitShift, int i, ColorScheme colorScheme) {
+    return Column(
+      children: [
+        ShiftDetails3rdCard(
+          title: 'Service Code: ',
+          subtitle: splitShift['s${i}_service_code'] ?? '-',
+        ),
+        ShiftDetails3rdCard(
+          title: 'Start Time: ',
+          subtitle: DateFormat('hh:mm aa')
+              .format(DateTime.parse(splitShift['s${i}_start_time']).toLocal()),
+        ),
+        ShiftDetails3rdCard(
+          title: 'End Time: ',
+          subtitle: DateFormat('hh:mm aa')
+              .format(DateTime.parse(splitShift['s${i}_end_time']).toLocal()),
+        ),
+        ShiftDetails3rdCard(
+          title: 'Duration: ',
+          subtitle: calculateShiftDuration(
+              splitShift['s${i}_start_time'], splitShift['s${i}_end_time']),
+        ),
+      ],
     );
   }
 }

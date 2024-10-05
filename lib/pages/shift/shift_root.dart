@@ -8,6 +8,7 @@ import 'package:m_worker/pages/shift/sub_pages/shift_add_note_photo.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_notes.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_profile.dart';
+import 'package:m_worker/pages/shift/sub_pages/shift_split_details.dart';
 import 'package:m_worker/utils/api.dart';
 
 import '../../components/shift_detail/shift_incident/shift_incident.dart';
@@ -29,6 +30,8 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   late bool isLoading = false;
   bool _isDialogShown = false; // Flag to track if the dialog has been shown
 
+  bool _isSplit = false;
+
   @override
   void initState() {
     super.initState();
@@ -42,8 +45,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
 
     if (shiftArguments is Map<String, dynamic>) {
       shiftData = Map<String, dynamic>.from(shiftArguments);
-    } else if (shiftArguments is int) {
-      _fetchShiftData(shiftArguments);
+      _fetchShiftData(shiftData['ShiftID']);
     }
     hasAppNote =
         shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
@@ -54,14 +56,42 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
     setState(() {
       isLoading = true;
     });
+    log('Fetching shift data for ShiftID: $shiftID');
     await Api.get('getApprovedShifts/$shiftID').then((response) {
       setState(() {
         shiftData = response['data'][0];
       });
     });
+    await _fetchIfSplitExists(shiftID);
     setState(() {
       isLoading = false;
     });
+  }
+
+  Future<void> _fetchIfSplitExists(int shiftID) async {
+    log('Checking if split exists for ShiftID: $shiftID');
+    try {
+      final response = await Api.get(
+          'checkIfSplitShiftExists/206'); // todo change to shiftID
+      log('Response from API: ${response.toString()}');
+      if (response['data'].isNotEmpty) {
+        setState(() {
+          _isSplit = true;
+        });
+        log('Split exists.');
+      } else {
+        setState(() {
+          _isSplit = false;
+        });
+        log('No split found.');
+      }
+    } catch (e) {
+      log('Error checking split shift: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   Future<void> _fetchClientmWorkerData() async {
@@ -273,10 +303,15 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
               : TabBarView(
                   controller: _tabController,
                   children: [
-                    ShiftDetails(
-                      shift: shiftData,
-                      onStatusChanged: _updateShiftStatus,
-                    ),
+                    _isSplit
+                        ? ShiftSplitDetails(
+                            shift: shiftData,
+                            onStatusChanged: _updateShiftStatus,
+                          )
+                        : ShiftDetails(
+                            shift: shiftData,
+                            onStatusChanged: _updateShiftStatus,
+                          ),
                     ShiftNotes(
                       shift: shiftData,
                       clientmWorkerData: clientmWorkerData.isNotEmpty

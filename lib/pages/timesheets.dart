@@ -63,11 +63,8 @@ class _TimesheetsState extends State<Timesheets> {
             .format(getWeekStart(selectedDate))
             .toString(),
       };
-      log('data: $data');
 
       final res = await Api.post('getTimesheetDetailDataByWorkerId', data);
-      log('res: $res');
-
       if (res['success']) {
         setState(() {
           shifts = List<Map<String, dynamic>>.from(res['data']);
@@ -133,7 +130,7 @@ class _TimesheetsState extends State<Timesheets> {
       return 0;
     }
     final start = DateFormat('HH:mm:ss').parse(shift['ActualStartTime']);
-    final end = DateFormat('HH:mm:ss').parse(shift['ActualEndTime']) ?? start;
+    final end = DateFormat('HH:mm:ss').parse(shift['ActualEndTime']);
     return end.difference(start).inMinutes / 60;
   }
 
@@ -152,7 +149,6 @@ class _TimesheetsState extends State<Timesheets> {
   }
 
   double get dailyTotal {
-    log('filteredShifts: $filteredShifts');
     return filteredShifts.fold<double>(
       0,
       (sum, shift) {
@@ -168,7 +164,6 @@ class _TimesheetsState extends State<Timesheets> {
   }
 
   List<Map<String, dynamic>> get filteredShifts {
-    log('selectedDate: $selectedDate');
     return shifts
         .where((shift) =>
             isSameDay(DateTime.parse(shift['ShiftStartDate']), selectedDate))
@@ -193,7 +188,6 @@ class _TimesheetsState extends State<Timesheets> {
 
   DateTime getWeekStart(DateTime date) {
     final weekday = date.weekday;
-    log('weekday: $weekday');
     final daysToSubtract = (weekday - DateTime.monday + 7) % 7;
     return date.subtract(Duration(days: daysToSubtract));
   }
@@ -222,8 +216,6 @@ class _TimesheetsState extends State<Timesheets> {
         "UpdateTime": updateTime,
       };
 
-      log('Saving shift data: $data');
-
       final res = await Api.put('saveTimesheetDetailsWorkerSide', data);
 
       if (res['success']) {
@@ -248,8 +240,32 @@ class _TimesheetsState extends State<Timesheets> {
     }
   }
 
-  // todo indicate the calender
   Future<void> _submitBtn() async {
+    final now = DateTime.now();
+    // if today is not the week end day
+    if (now.weekday != 7 && now.weekday != 6) {
+      showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Error', style: TextStyle(color: Colors.red)),
+              content: const Text(
+                  'You can only submit timesheets on Weekend. Please try again on weekends.',
+                  style: TextStyle(color: Colors.red, fontSize: 16)),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text('OK',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary)),
+                ),
+              ],
+            );
+          });
+      return;
+    }
     int count = 0;
     List errors = [];
     final weekStart = getWeekStart(selectedDate);
@@ -274,13 +290,10 @@ class _TimesheetsState extends State<Timesheets> {
           "UpdateTime": updateTime,
         };
 
-        log('Saving shift data: $data');
-
         final res = await Api.put('submitTimesheetDetailsWorkerSide', data);
 
         if (res['success']) {
           log('Shift data updated successfully');
-          // todo notify the users
           count++;
         } else {
           log('Error updating shift data: ${res['message']}');
@@ -293,6 +306,14 @@ class _TimesheetsState extends State<Timesheets> {
       }
     }
     if (count == weekShifts.length) {
+      final email = await Prefs.getEmail();
+      await Api.post('sendNotificationToID', {
+        "id": 'us_${weekShifts[0]['TsId']}',
+        "title": 'Timesheet Submitted',
+        "body": 'Timesheet for '
+            '${DateFormat('dd/MM/yyyy').format(weekStart)} - ${DateFormat('dd/MM/yyyy').format(weekEnd)} '
+            ' has been submitted by $email',
+      });
       showDialog(
           context: context,
           builder: (context) {
@@ -472,8 +493,7 @@ class _TimesheetsState extends State<Timesheets> {
                                             },
                                             child: Card(
                                               elevation: 0,
-                                              color: shift['TlStatus'] ==
-                                                          'P' || // todo U for pending submission
+                                              color: shift['TlStatus'] == 'P' ||
                                                       shift['TlStatus'] == 'U'
                                                   ? colorScheme
                                                       .secondaryContainer

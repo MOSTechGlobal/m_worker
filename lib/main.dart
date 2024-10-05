@@ -19,9 +19,11 @@ import 'package:m_worker/pages/shift/sub_pages/more/client_documents.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/add_client_expenses.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/client_expenses.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/end_shift.dart';
+import 'package:m_worker/pages/shift/sub_pages/more/end_split_shift.dart';
 import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'auth/auth.dart';
 import 'bloc/theme_bloc.dart';
@@ -67,6 +69,12 @@ void main() async {
   await dotenv.load(fileName: ".env");
   await Alarm.init();
   Alarm.stop(42);
+
+  final prefs = await SharedPreferences.getInstance();
+  if (!prefs.containsKey('showWeather')) {
+    await prefs.setBool('showWeather', true);
+  }
+
   runApp(const MyApp());
 }
 
@@ -151,6 +159,7 @@ class MyApp extends StatelessWidget {
               '/id_card': (context) => const IdCard(),
               '/timesheets': (context) => const Timesheets(),
               '/end_shift': (context) => const EndShift(),
+              '/end_split_shift': (context) => const EndSplitShift(),
               '/shift_more_documents': (context) => const ClientDocuments(),
               '/shift_more_expenses': (context) => const Expenses(),
               '/shift_more_client_expenses/add': (context) =>
