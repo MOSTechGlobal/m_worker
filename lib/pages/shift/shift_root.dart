@@ -71,10 +71,9 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   Future<void> _fetchIfSplitExists(int shiftID) async {
     log('Checking if split exists for ShiftID: $shiftID');
     try {
-      final response = await Api.get(
-          'checkIfSplitShiftExists/206'); // todo change to shiftID
+      final response = await Api.get('doesShiftSplitExist/$shiftID');
       log('Response from API: ${response.toString()}');
-      if (response['data'].isNotEmpty) {
+      if (response['data']) {
         setState(() {
           _isSplit = true;
         });

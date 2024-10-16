@@ -28,7 +28,8 @@ class IncidentFormScreen extends StatefulWidget {
   _IncidentFormScreenState createState() => _IncidentFormScreenState();
 }
 
-class _IncidentFormScreenState extends State<IncidentFormScreen> {
+class _IncidentFormScreenState extends State<IncidentFormScreen>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final Map<String, dynamic> _formData = {
     'FirstName': '',
@@ -41,10 +42,12 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
     'Phone': '',
     'AccidentType': '',
     'IncidentRelateTo': '',
+    'IncidentRelateToOther': '',
     'IncidentDate': '',
     'IncidentTime': '',
     'IncidentLocation': '',
     'IncidentType': [], // Initialize as an empty list
+    'IncidentTypeOther': '',
     'IncidentDetail': '',
     'InjuryDetail': '',
     'IncidentCircumstance': '',
@@ -61,7 +64,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
     'HazardDetail': '', // Add default value
     'Bucket': '',
     'Folder': '',
-    'File': ''
+    'File': '',
   };
 
   @override
@@ -155,7 +158,8 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
               pw.Text('Accident Type: ${_formData['AccidentType']}'),
               pw.SizedBox(height: 5),
               if (isIncident) ...[
-                pw.Text('Incident Relate To: ${_formData['IncidentRelateTo']}'),
+                pw.Text(
+                    'Incident Relate To: ${_formData['IncidentRelateTo'] == 'Other' ? _formData['IncidentRelateToOther'] : _formData['IncidentRelateTo']}'),
                 pw.SizedBox(height: 5),
                 pw.Text('Incident Date: ${_formData['IncidentDate']}'),
                 pw.SizedBox(height: 5),
@@ -239,6 +243,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
       );
 
       final company = await Prefs.getCompanyName();
+      final email = await Prefs.getEmail();
 
       await s3Storage.putObject(
         'moscaresolutions',
@@ -253,6 +258,8 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
         _formData['Bucket'] = 'moscaresolutions';
         _formData['Folder'] = '$company/client/${widget.clientID}/incidents/';
         _formData['File'] = file.path.split('/').last;
+        _formData['CreatedBy'] = email;
+        _formData['CreatedOn'] = DateTime.now().toLocal().toString();
       });
 
       try {
@@ -283,13 +290,16 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text(
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+            title: Text(
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold),
                 'Incident Form'),
-            content: const Text(
-                style:
-                    TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            content: Text(
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold),
                 'Incident form has been submitted successfully'),
             actions: [
               TextButton(
@@ -298,9 +308,10 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                   Navigator.of(context).pop();
                   Navigator.of(context).pop();
                 },
-                child: const Text(
+                child: Text(
                     style: TextStyle(
-                        color: Colors.black, fontWeight: FontWeight.bold),
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        fontWeight: FontWeight.bold),
                     'OK'),
               ),
             ],
@@ -316,6 +327,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.black),
         title: const Text(
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           'Incident Form',
@@ -441,7 +453,6 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                 fontWeight: FontWeight.bold),
                             'Address'),
                         FormBuilderTextField(
-                          validator: _requiredFieldValidator,
                           name: 'Address',
                           controller:
                               TextEditingController(text: _formData['Address']),
@@ -471,7 +482,6 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                 fontWeight: FontWeight.bold),
                             'Suburb'),
                         FormBuilderTextField(
-                          validator: _requiredFieldValidator,
                           controller:
                               TextEditingController(text: _formData['Suburb']),
                           name: 'Suburb',
@@ -799,6 +809,9 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                             onChanged: (value) {
                               _handleFormChange(
                                   'IncidentRelateTo', value.toString());
+                              if (value == 'Other') {
+                                _handleFormChange('IncidentRelateToOther', '');
+                              }
                             },
                           ),
                           if (_formData['IncidentRelateTo'] == 'Other') ...[
@@ -816,7 +829,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                               ),
                               onChanged: (value) {
                                 _handleFormChange(
-                                    'IncidentRelateTo', 'Other: $value');
+                                    'IncidentRelateToOther', value);
                               },
                             ),
                           ],
@@ -880,34 +893,36 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                   fontWeight: FontWeight.bold),
                               'Type of Incident: '),
                           FormBuilderCheckboxGroup(
-                              name: 'IncidentType',
-                              options: [
-                                'Abuse (e.g. financial, physical, emotional, rights)',
-                                'Behavioural (e.g. aggression, absconding, verbal abuse, sexual)',
-                                'Fall',
-                                'Medical Episode (e.g. seizure, choking, heart attack)',
-                                'Missing Items / Theft',
-                                'Near Miss (Client has left usual baseline behaviour)',
-                                'Category 1 (Hospitalisation, death, major injury / property damage, police involved)',
-                                'Category 2 (Hitting, Self-harm, property damage, requiring first aid)',
-                                'Category 3 (Spitting, throwing, minor injury, no first aid required)',
-                                'Infectious Material, body or hazardous substance exposure',
-                                'Other'
-                              ]
-                                  .map((option) =>
-                                      FormBuilderFieldOption(value: option))
-                                  .toList(),
-                              onChanged: (value) {
-                                _handleFormChange('IncidentType', value);
-                              }),
+                            name: 'IncidentType',
+                            options: [
+                              'Abuse (e.g. financial, physical, emotional, rights)',
+                              'Behavioural (e.g. aggression, absconding, verbal abuse, sexual)',
+                              'Fall',
+                              'Medical Episode (e.g. seizure, choking, heart attack)',
+                              'Missing Items / Theft',
+                              'Near Miss (Client has left usual baseline behaviour)',
+                              'Category 1 (Hospitalisation, death, major injury / property damage, police involved)',
+                              'Category 2 (Hitting, Self-harm, property damage, requiring first aid)',
+                              'Category 3 (Spitting, throwing, minor injury, no first aid required)',
+                              'Infectious Material, body or hazardous substance exposure',
+                              'Other'
+                            ]
+                                .map((option) =>
+                                    FormBuilderFieldOption(value: option))
+                                .toList(),
+                            onChanged: (value) {
+                              _handleFormChange('IncidentType', value);
+                            },
+                          ),
                           if ((_formData['IncidentType'] as List)
                               .contains('Other')) ...[
                             const SizedBox(height: 16),
                             const Text(
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontWeight: FontWeight.bold),
-                                'Type of Incident Other'),
+                              style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold),
+                              'Type of Incident Other',
+                            ),
                             FormBuilderTextField(
                               validator: _requiredFieldValidator,
                               name: 'IncidentTypeOther',
@@ -915,10 +930,8 @@ class _IncidentFormScreenState extends State<IncidentFormScreen> {
                                 hintText: 'Enter Other',
                               ),
                               onChanged: (value) {
-                                _handleFormChange('IncidentType', [
-                                  ..._formData['IncidentType'],
-                                  'Other: $value'
-                                ]);
+                                // Update the separate key for the "Other" input
+                                _handleFormChange('IncidentTypeOther', value);
                               },
                             ),
                           ],

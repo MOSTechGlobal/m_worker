@@ -38,7 +38,8 @@ class ShiftDetails extends StatefulWidget {
   }
 }
 
-class _ShiftDetailsState extends State<ShiftDetails> {
+class _ShiftDetailsState extends State<ShiftDetails>
+    with TickerProviderStateMixin {
   Map shift = {};
   Map clientData = {};
   Map workerData = {};
@@ -222,6 +223,8 @@ class _ShiftDetailsState extends State<ShiftDetails> {
 
   // Function to stop tracking
   Future<void> _stopTracking() async {
+    if (!mounted) return;
+
     setState(() {
       _isTracking = false;
     });
@@ -236,25 +239,29 @@ class _ShiftDetailsState extends State<ShiftDetails> {
         _endPosition!.longitude,
       );
 
-      setState(() {
-        totalDistanceKm = _totalDistance / 1000;
-      });
+      if (mounted) {
+        setState(() {
+          totalDistanceKm = _totalDistance / 1000;
+        });
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
-    shift.clear();
-    shift.addAll(widget.shift);
-    _fetchClientData(clientID: shift['ClientID']);
-    _fetchWorkerData();
-    _fetchShiftData(shift['ShiftID']);
-    _initAlarm();
-    _checkExtensionBtn();
-    _fetchExtensionRequestStatus();
-    _fetchIsOnBreak();
-    player.setReleaseMode(ReleaseMode.stop);
+    if (mounted) {
+      shift.clear();
+      shift.addAll(widget.shift);
+      _fetchClientData(clientID: shift['ClientID']);
+      _fetchWorkerData();
+      _fetchShiftData(shift['ShiftID']);
+      _initAlarm();
+      _checkExtensionBtn();
+      _fetchExtensionRequestStatus();
+      _fetchIsOnBreak();
+      player.setReleaseMode(ReleaseMode.stop);
+    }
   }
 
   void _initAlarm() async {
@@ -417,6 +424,24 @@ class _ShiftDetailsState extends State<ShiftDetails> {
   }
 
   void _checkExtensionBtn() {
+    // if the shift is in progress and the current time is 15 minutes before the shift end time then show the extension button
+    if (shift['ShiftStatus'] == 'In Progress') {
+      final shiftEnd = DateTime.parse(shift['ShiftEnd']);
+      final now = DateTime.now();
+      final duration = now.difference(shiftEnd);
+
+      if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15))) &&
+          !showExtensionBtn) {
+        setState(() {
+          showExtensionBtn = true;
+        });
+      } else {
+        setState(() {
+          showExtensionBtn = false;
+        });
+      }
+    }
+
     _timer = Timer.periodic(const Duration(minutes: 15), (timer) async {
       final shiftEnd = DateTime.parse(shift['ShiftEnd']);
       final now = DateTime.now();
@@ -658,6 +683,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           response['data'].isNotEmpty) {
         if (mounted) {
           setState(() {
+            showExtensionBtn = false;
             extensionData.clear();
             extensionData.addAll(response['data'][0]);
           });
@@ -1168,10 +1194,10 @@ class _ShiftDetailsState extends State<ShiftDetails> {
           actions: [
             TextButton(
               onPressed: () {
-                setState(() {
-                  showEndShiftBtn = false;
-                });
                 if (mounted) {
+                  setState(() {
+                    showEndShiftBtn = false;
+                  });
                   Navigator.of(context).pop();
                 }
               },
@@ -1179,7 +1205,7 @@ class _ShiftDetailsState extends State<ShiftDetails> {
             ),
             ElevatedButton(
               onPressed: () async {
-                await _stopTracking();
+                _stopTracking();
                 final args = {
                   'shift': shift,
                   'worker': workerData,

@@ -40,17 +40,18 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                   ),
                   child: Container(
                     width: MediaQuery.of(context).size.width * 0.8,
-                    height: MediaQuery.of(context).size.height * 0.8,
                     padding: const EdgeInsets.all(16.0),
                     child: SingleChildScrollView(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          const Text(
+                          Text(
                             'Incident',
                             style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                                color: colorScheme.tertiary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 10),
                           CheckboxListTile(
@@ -82,14 +83,21 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                           ),
                           const SizedBox(height: 10),
                           DropdownButtonFormField<String>(
-                            decoration:
-                                const InputDecoration(labelText: 'Level'),
+                            decoration: InputDecoration(
+                              labelText: 'Level',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                              ),
+                            ),
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                            ),
                             value: incidentData['Level'] as String?,
                             items: [
                               'Hazard/Risk',
-                              'Level1',
-                              'Level2',
-                              'Level3',
+                              'Level 1',
+                              'Level 2',
+                              'Level 3',
                               'Near Miss'
                             ]
                                 .map((level) => DropdownMenuItem(
@@ -108,6 +116,9 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                             children: [
                               Expanded(
                                 child: TextFormField(
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                  ),
                                   onTapOutside: (_) {
                                     FocusScope.of(context).unfocus();
                                   },
@@ -137,6 +148,9 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: TextFormField(
+                                  style: TextStyle(
+                                    color: colorScheme.primary,
+                                  ),
                                   onTapOutside: (_) {
                                     FocusScope.of(context).unfocus();
                                   },
@@ -165,6 +179,9 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                           ),
                           const SizedBox(height: 10),
                           TextFormField(
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                            ),
                             onTapOutside: (_) {
                               FocusScope.of(context).unfocus();
                             },
@@ -177,7 +194,7 @@ void showShiftIncident(BuildContext context, String clientID, String workerID) {
                               });
                             },
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 20),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [

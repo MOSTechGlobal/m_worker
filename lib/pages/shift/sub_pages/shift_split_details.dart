@@ -549,8 +549,7 @@ class _ShiftSplitDetailsState extends State<ShiftSplitDetails> {
 
   Future<void> _fetchSplitShiftData() async {
     log('Fetching split shift data for ShiftID: ${shift['ShiftID']}');
-    final response = await Api.get(
-        'getShiftSplitDataByID/206'); // todo change to shift['ShiftID']
+    final response = await Api.get('getShiftSplitDataByID/${shift['ShiftID']}');
     if (response['data'] != null && response['data'].isNotEmpty) {
       setState(() {
         splitShift.clear();

@@ -67,6 +67,53 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
   }
 
   void _requestExtension() async {
+    if (_extensionReasonController.text.isEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) {
+          return CupertinoAlertDialog(
+            title: Text('Reason Required',
+                style: TextStyle(color: widget.colorScheme.error)),
+            content: Text('Please provide a reason for the extension request.',
+                style: TextStyle(color: widget.colorScheme.primary)),
+            actions: [
+              CupertinoDialogAction(
+                child: Text('OK',
+                    style: TextStyle(color: widget.colorScheme.error)),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    if (image0 == null && doc.isEmpty) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) {
+          return CupertinoAlertDialog(
+            title: Text('Attachment Required',
+                style: TextStyle(color: widget.colorScheme.error)),
+            content: Text('Please attach a file or take a photo.',
+                style: TextStyle(color: widget.colorScheme.primary)),
+            actions: [
+              CupertinoDialogAction(
+                child: Text('OK',
+                    style: TextStyle(color: widget.colorScheme.error)),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
     try {
       final email = await Prefs.getEmail();
       final company = await Prefs.getCompanyName();
