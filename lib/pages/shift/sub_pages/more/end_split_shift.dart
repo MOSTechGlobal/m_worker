@@ -278,7 +278,7 @@ class _EndSplitShiftState extends State<EndSplitShift> {
     final email = await Prefs.getEmail();
     for (int i = 0; i < _kmNoteControllers.length; i++) {
       final data = {
-        'ShiftId': shift['ShiftID'],
+        'ShiftId': splitShift['shift_id'],
         // 'ShiftStartDate': shift['ShiftStart'],
         'ShiftStartDate': splitShift['s${i + 1}_start_time'],
         'Km': _kmNoteControllers[i].text,
