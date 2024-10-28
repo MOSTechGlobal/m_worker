@@ -8,6 +8,7 @@ import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/utils/prefs.dart';
 
 import '../bloc/theme_bloc.dart';
+import 'all_shifts/all_shift_details/all_shifts_details_page.dart';
 
 class Timesheets extends StatefulWidget {
   const Timesheets({super.key});
@@ -32,8 +33,10 @@ class _TimesheetsState extends State<Timesheets> {
   @override
   void initState() {
     super.initState();
-    _fetchShifts();
-    _exitEditMode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchShifts();
+      _exitEditMode();
+    });
   }
 
   @override
@@ -61,45 +64,40 @@ class _TimesheetsState extends State<Timesheets> {
 
       final data = {
         "workerID": workerID,
-        "weekDate": DateFormat('yyyy-MM-dd')
-            .format(getWeekStart(selectedDate))
-            .toString(),
+        "weekDate": DateFormat('yyyy-MM-dd').format(getWeekStart(selectedDate)),
       };
 
+      log("data: $data");
+
       final res = await Api.post('getTimesheetDetailDataByWorkerId', data);
-      if (res['success']) {
-        setState(() async {
-          shifts = List<Map<String, dynamic>>.from(res['data']);
-          log('Shifts fetched: ${shifts.toString()}');
-          for (var shift in res['data']) {
-            DateTime shiftDate = DateFormat('yyyy-MM-dd')
-                .parse(shift['ShiftStartDate'], true)
-                .toLocal();
+      if (res != null && res['success']) {
+        // Assign shifts and prepare shift statuses outside setState
+        final fetchedShifts = List<Map<String, dynamic>>.from(res['data']);
+        log('Shifts fetched: ${fetchedShifts.toString()}');
 
-            shiftDate =
-                DateTime(shiftDate.year, shiftDate.month, shiftDate.day);
+        final newShiftStatuses = <DateTime, Map<String, String>>{};
+        for (var shift in fetchedShifts) {
+          DateTime shiftDate =
+              DateTime.parse(shift['ShiftStartDate']).toLocal();
 
-            if (!shiftStatuses.containsKey(shiftDate)) {
-              shiftStatuses[shiftDate] = {
-                'TlStatus': shift['TlStatus'],
-                'RmStatus': shift['RmStatus'],
-              };
-            } else {
-              var existingStatuses = shiftStatuses[shiftDate];
-              if (shift['TlStatus'] != existingStatuses?['TlStatus']) {
-                existingStatuses?['TlStatus'] = shift['TlStatus'];
-              }
-              if (shift['RmStatus'] != existingStatuses?['RmStatus']) {
-                existingStatuses?['RmStatus'] = shift['RmStatus'];
-              }
-            }
-            final re = await Api.get('doesShiftSplitExist/${shift['ShiftId']}');
-            final splitExists = re['success'] && re['data'] == 1;
-            if (splitExists) {
-              _fetchSplitShifts(shift['ShiftId']);
-            }
+          shiftDate = DateTime(shiftDate.year, shiftDate.month, shiftDate.day);
+
+          newShiftStatuses[shiftDate] ??= {
+            'TlStatus': shift['TlStatus'],
+            'RmStatus': shift['RmStatus'],
+          };
+
+          // Fetch split shifts
+          final re = await Api.get('doesShiftSplitExist/${shift['ShiftId']}');
+          if (re != null && re['success'] == true && re['data'] == 1) {
+            await _fetchSplitShifts(shift['ShiftId']);
           }
+        }
 
+        // Update state inside setState
+        setState(() {
+          shifts = fetchedShifts;
+          shiftStatuses = newShiftStatuses;
           _initializeControllers();
         });
       } else {
@@ -540,9 +538,19 @@ class _TimesheetsState extends State<Timesheets> {
                                               shifts.indexOf(shift);
                                           return GestureDetector(
                                             onTap: () {
-                                              Navigator.pushNamed(
-                                                  context, '/shift_details',
-                                                  arguments: shift['ShiftId']);
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      AllShiftsDetailsPage(
+                                                    isLoc:
+                                                        shift["ClientId"] == 0
+                                                            ? true
+                                                            : false,
+                                                    shiftID: shift["ShiftId"],
+                                                  ),
+                                                ),
+                                              );
                                             },
                                             onLongPress: () {
                                               if (shift['TlStatus'] == 'P' ||

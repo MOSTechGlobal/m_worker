@@ -3,7 +3,6 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:convert';
 
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -14,17 +13,19 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:s3_storage/s3_storage.dart';
 
-import '../../../utils/prefs.dart';
+import '../../../../../utils/prefs.dart';
 
 class IncidentFormScreen extends StatefulWidget {
   final String clientID;
+  final String locationId;
   final String workerID;
   final Map prefilledInfo;
   const IncidentFormScreen(
       {super.key,
-      required this.prefilledInfo,
-      required this.clientID,
-      required this.workerID});
+        required this.prefilledInfo,
+        required this.clientID,
+        required this.locationId,
+        required this.workerID});
 
   @override
   _IncidentFormScreenState createState() => _IncidentFormScreenState();
@@ -69,6 +70,15 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
     'File': '',
   };
 
+  // Declare the controllers
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _addressController;
+  late TextEditingController _suburbController;
+  late TextEditingController _stateController;
+  late TextEditingController _postCodeController;
+  late TextEditingController _phoneController;
+
   @override
   initState() {
     super.initState();
@@ -76,12 +86,34 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
     _formData['WorkerID'] = widget.workerID;
     _formData['IncidentID'] = DateTime.now().millisecondsSinceEpoch;
     _formData['AccidentType'] = 'Incident';
+
+    // Initialize the controllers
+    _firstNameController = TextEditingController();
+    _lastNameController = TextEditingController();
+    _addressController = TextEditingController();
+    _suburbController = TextEditingController();
+    _stateController = TextEditingController();
+    _postCodeController = TextEditingController();
+    _phoneController = TextEditingController();
+
     _fetchClientData();
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _addressController.dispose();
+    _suburbController.dispose();
+    _stateController.dispose();
+    _postCodeController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   void _fetchClientData() async {
     final res =
-        await Api.get('getClientDataForIncidentForm/${widget.clientID}');
+    await Api.get('getClientDataForIncidentForm/${widget.clientID}');
     if (res['success']) {
       setState(() {
         _formData['FirstName'] = res['data'][0]['FirstName'].toString();
@@ -90,6 +122,14 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
         _formData['Suburb'] = res['data'][0]['Suburb'].toString();
         _formData['PostCode'] = res['data'][0]['Postcode'].toString();
         _formData['Phone'] = res['data'][0]['Phone'].toString();
+
+        // Update controllers
+        _firstNameController.text = _formData['FirstName'];
+        _lastNameController.text = _formData['LastName'];
+        _addressController.text = _formData['Address'];
+        _suburbController.text = _formData['Suburb'];
+        _postCodeController.text = _formData['PostCode'];
+        _phoneController.text = _formData['Phone'];
       });
 
       log('Form data: $_formData');
@@ -119,6 +159,15 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      setState(() {
+        _formData['FirstName'] = _firstNameController.text;
+        _formData['LastName'] = _lastNameController.text;
+        _formData['Address'] = _addressController.text;
+        _formData['Suburb'] = _suburbController.text;
+        _formData['State'] = _stateController.text;
+        _formData['PostCode'] = _postCodeController.text;
+        _formData['Phone'] = _phoneController.text;
+      });
       _generatePdf();
     }
   }
@@ -170,7 +219,8 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                 pw.Text('Incident Location: ${_formData['IncidentLocation']}'),
                 pw.SizedBox(height: 5),
                 pw.Text('Type of Incident: ${_formData['IncidentType']}'),
-                if ((_formData['IncidentType'] as List).contains('Other')) ...[
+                if ((_formData['IncidentType'] as List)
+                    .contains('Other')) ...[
                   pw.SizedBox(height: 5),
                   pw.Text(
                       'Type of Incident Other: ${_formData['IncidentTypeOther']}'),
@@ -247,6 +297,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
       final company = await Prefs.getCompanyName();
       final email = await Prefs.getEmail();
 
+      widget.clientID != ""?
       await s3Storage.putObject(
         'moscaresolutions',
         '$company/client/${widget.clientID}/incidents/${file.path.split('/').last}',
@@ -254,11 +305,24 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
         onProgress: (progress) {
           log('Progress: $progress');
         },
+      ): await s3Storage.putObject(
+        'moscaresolutions',
+        '$company/location/${widget.locationId}/incidents/${file.path.split('/').last}',
+        Stream<Uint8List>.value(Uint8List.fromList(file.readAsBytesSync())),
+        onProgress: (progress) {
+          log('Progress: $progress');
+        },
       );
-
+      widget.clientID != ""?
       setState(() {
         _formData['Bucket'] = 'moscaresolutions';
         _formData['Folder'] = '$company/client/${widget.clientID}/incidents/';
+        _formData['File'] = file.path.split('/').last;
+        _formData['CreatedBy'] = email;
+        _formData['CreatedOn'] = DateTime.now().toLocal().toString();
+      }):setState(() {
+        _formData['Bucket'] = 'moscaresolutions';
+        _formData['Folder'] = '$company/location/${widget.locationId}/incidents/';
         _formData['File'] = file.path.split('/').last;
         _formData['CreatedBy'] = email;
         _formData['CreatedOn'] = DateTime.now().toLocal().toString();
@@ -368,8 +432,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Please Select'),
                         FormBuilderRadioGroup(
                           name: 'AccidentType',
@@ -377,7 +440,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                           initialValue: 'Incident',
                           options: ['Incident', 'Hazard/Risk']
                               .map((option) =>
-                                  FormBuilderFieldOption(value: option))
+                              FormBuilderFieldOption(value: option))
                               .toList(),
                           onChanged: (value) {
                             _handleFormChange('AccidentType', value.toString());
@@ -398,13 +461,11 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'First Name'),
                         FormBuilderTextField(
                           validator: _requiredFieldValidator,
-                          controller: TextEditingController(
-                              text: _formData['FirstName']),
+                          controller: _firstNameController,
                           name: 'FirstName',
                           decoration: const InputDecoration(
                             hintText: 'Enter First Name',
@@ -428,14 +489,12 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Last Name'),
                         FormBuilderTextField(
                           validator: _requiredFieldValidator,
+                          controller: _lastNameController,
                           name: 'LastName',
-                          controller: TextEditingController(
-                              text: _formData['LastName']),
                           decoration: const InputDecoration(
                             hintText: 'Enter Last Name',
                           ),
@@ -458,13 +517,11 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Address'),
                         FormBuilderTextField(
+                          controller: _addressController,
                           name: 'Address',
-                          controller:
-                              TextEditingController(text: _formData['Address']),
                           decoration: const InputDecoration(
                             hintText: 'Enter Address',
                           ),
@@ -487,12 +544,10 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Suburb'),
                         FormBuilderTextField(
-                          controller:
-                              TextEditingController(text: _formData['Suburb']),
+                          controller: _suburbController,
                           name: 'Suburb',
                           decoration: const InputDecoration(
                             hintText: 'Enter Suburb',
@@ -516,12 +571,10 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'State'),
                         FormBuilderTextField(
-                          controller:
-                              TextEditingController(text: _formData['State']),
+                          controller: _stateController,
                           name: 'State',
                           decoration: const InputDecoration(
                             hintText: 'Enter State',
@@ -545,13 +598,11 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Postcode'),
                         FormBuilderTextField(
+                          controller: _postCodeController,
                           name: 'PostCode',
-                          controller: TextEditingController(
-                              text: _formData['PostCode']),
                           decoration: const InputDecoration(
                             hintText: 'Enter PostCode',
                           ),
@@ -574,14 +625,11 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                       children: [
                         const Text(
                             style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold),
+                                color: Colors.black, fontWeight: FontWeight.bold),
                             'Phone'),
                         FormBuilderTextField(
-                          validator: _requiredFieldValidator,
+                          controller: _phoneController,
                           name: 'Phone',
-                          controller:
-                              TextEditingController(text: _formData['Phone']),
                           decoration: const InputDecoration(
                             hintText: 'Enter Phone',
                           ),
@@ -627,7 +675,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other'
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange(
@@ -671,7 +719,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                                 'Other'
                               ]
                                   .map((option) =>
-                                      FormBuilderFieldOption(value: option))
+                                  FormBuilderFieldOption(value: option))
                                   .toList(),
                               onChanged: (value) {
                                 _handleFormChange('HazardType', value);
@@ -729,7 +777,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other'
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange('ImmediateActionTaken', value);
@@ -813,7 +861,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other'
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange(
@@ -917,7 +965,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other'
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange('IncidentType', value);
@@ -987,7 +1035,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                             name: 'IncidentCircumstance',
                             decoration: const InputDecoration(
                               hintText:
-                                  'What were the circumstances/triggers/leading up to the incident',
+                              'What were the circumstances/triggers/leading up to the incident',
                             ),
                             onChanged: (value) {
                               _handleFormChange('IncidentCircumstance', value!);
@@ -1010,7 +1058,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other'
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange(
@@ -1091,7 +1139,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Person Requested No Action Be Taken',
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange('ImmediateActionTaken', value);
@@ -1113,7 +1161,7 @@ class _IncidentFormScreenState extends State<IncidentFormScreen>
                               'Other',
                             ]
                                 .map((option) =>
-                                    FormBuilderFieldOption(value: option))
+                                FormBuilderFieldOption(value: option))
                                 .toList(),
                             onChanged: (value) {
                               _handleFormChange(

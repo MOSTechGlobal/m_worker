@@ -646,9 +646,13 @@ class _ShiftSplitDetailsState extends State<ShiftSplitDetails> {
           'workerID': workerID,
         };
 
+        log("timesheet data: $data");
         try {
+          log("timesheet called;");
+
           await Api.post('/insertTimesheetDetailData', data);
-        } catch (e) {
+          log("timesheet end");
+          } catch (e) {
           log('TS Entry API Error: $e');
         }
       }

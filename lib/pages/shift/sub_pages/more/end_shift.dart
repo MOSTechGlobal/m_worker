@@ -91,11 +91,10 @@ class _EndShiftState extends State<EndShift> {
     setState(() {
       isLoading = true;
     });
-
+    log("prev shilftID: ${shift['ShiftID']}");
     try {
-      final response = await Api.get('checkIfExtensionRequestExists', {
-        'ShiftId': shift['ShiftID'].toString(),
-      });
+      final response =
+          await Api.get('checkIfExtensionRequestExists/${shift['ShiftID']}');
       log('Response: $response');
       if (response['success'] == true && response['data'] == true) {
         setState(() {

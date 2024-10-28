@@ -19,28 +19,33 @@ import 'package:m_worker/utils/prefs.dart';
 import 'package:s3_storage/s3_storage.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
-import '../../../bloc/theme_bloc.dart';
-import '../../../components/shift_detail/shift_detail_3rd_card.dart';
-import '../../../main.dart';
+import '../../../../bloc/theme_bloc.dart';
+import '../../../../components/shift_detail/shift_detail_3rd_card.dart';
+import '../../../../main.dart';
 
 class ShiftDetails extends StatefulWidget {
   final Map<dynamic, dynamic> shift;
+  final bool isLoc;
   final ValueChanged<String> onStatusChanged;
 
   const ShiftDetails(
-      {super.key, required this.shift, required this.onStatusChanged});
+      {super.key,
+      required this.shift,
+      required this.isLoc,
+      required this.onStatusChanged});
 
   @override
   State<ShiftDetails> createState() => _ShiftDetailsState();
 
-  // void fetchExtensionRequestStatus(int extensionId) {
-  //   _ShiftDetailsState()._fetchExtensionRequestStatus();
-  // }
+// void fetchExtensionRequestStatus(int extensionId) {
+//   _ShiftDetailsState()._fetchExtensionRequestStatus();
+// }
 }
 
 class _ShiftDetailsState extends State<ShiftDetails>
     with TickerProviderStateMixin {
   Map shift = {};
+  Map<String, dynamic> shiftLocationData = {};
   Map clientData = {};
   Map workerData = {};
   bool isBreakActive = false;
@@ -57,7 +62,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
   bool showExtensionBtn = false;
   Map extensionData = {};
 
-  late Timer _timer;
+  Timer? _timer;
   late Timer _extensionTimer;
 
   double totalDistanceKm = 0.0;
@@ -71,6 +76,24 @@ class _ShiftDetailsState extends State<ShiftDetails>
   Position? _endPosition;
   double _totalDistance = 0.0;
   bool _isTracking = false;
+
+  Future<void> _fetchLocationData() async {
+    log("location id: ${widget.shift['LocationId']}");
+    final res = await Api.get(
+        'getLocationProfileGeneralDataByID/${widget.shift['LocationId']}');
+    if (res['success'] == true && res['data'] is List) {
+      if (res['data'].isEmpty) {
+        log("res null");
+        return;
+      }
+      setState(() {
+        shiftLocationData = res['data'][0];
+      });
+      log('location Data: $shiftLocationData');
+    } else {
+      throw Exception('Invalid API response format');
+    }
+  }
 
   Future<void> _fetchIsOnBreak() async {
     final response =
@@ -253,7 +276,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
     if (mounted) {
       shift.clear();
       shift.addAll(widget.shift);
-      log('ShiftID ');
+      log('preee data: ${shift} ');
       // Check if 'ShiftID' exists and is an int
       if (shift['ShiftID'] == null || shift['ShiftID'] is! int) {
         log('ShiftID is null or not an int');
@@ -281,7 +304,9 @@ class _ShiftDetailsState extends State<ShiftDetails>
         return;
       }
 
-      _fetchClientData(clientID: shift['ClientID']);
+      widget.isLoc == false
+          ? _fetchClientData(clientID: shift['ClientID'])
+          : _fetchLocationData();
       _fetchWorkerData();
       _fetchShiftData(shift['ShiftID']);
       _initAlarm();
@@ -306,10 +331,13 @@ class _ShiftDetailsState extends State<ShiftDetails>
     }
   }
 
+  bool _isDisposed = false;
+
   @override
   void dispose() {
     _alarmSubscription.cancel();
-    _timer.cancel();
+    _timer?.cancel();
+    _isDisposed = true;
     _extensionTimer.cancel();
     player.dispose();
     super.dispose();
@@ -362,15 +390,15 @@ class _ShiftDetailsState extends State<ShiftDetails>
         AndroidNotificationDetails(
       'm-w-bg', // Replace with your channel ID
       'Mostech Notifs', // Replace with your channel name
-      channelDescription:
-          'General Channel to get Notifs', // Replace with your channel description
+      channelDescription: 'General Channel to get Notifs',
+      // Replace with your channel description
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
       showWhen: false,
       // Define actions
-      additionalFlags:
-          Int32List.fromList([1]), // Necessary for Android 8.0 and above
+      additionalFlags: Int32List.fromList([1]),
+      // Necessary for Android 8.0 and above
       styleInformation: const DefaultStyleInformation(true, true),
       // Set up notification actions
       actions: [
@@ -441,10 +469,11 @@ class _ShiftDetailsState extends State<ShiftDetails>
   }
 
   Future<bool> _checkExtensionRequestExists() async {
-    final response = await Api.get('getShiftExtensionDetailDataByShiftId', {
-      'ShiftID': shift['ShiftID'],
-    });
-    if (response['data'] != null && response['data']) {
+    final response = await Api.get(
+        'getShiftExtensionDetailDataByShiftId/${shift['ShiftID']}');
+    if (response['data'] != null &&
+        response['data'] is List &&
+        response['data'].isNotEmpty) {
       return true;
     } else {
       return false;
@@ -460,51 +489,73 @@ class _ShiftDetailsState extends State<ShiftDetails>
 
       if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15))) &&
           !showExtensionBtn) {
-        setState(() {
-          showExtensionBtn = true;
-        });
+        if (mounted) {
+          setState(() {
+            showExtensionBtn = true;
+          });
+        }
       } else {
-        setState(() {
-          showExtensionBtn = false;
-        });
+        if (mounted) {
+          setState(() {
+            showExtensionBtn = false;
+          });
+        }
       }
     }
+    log("before timer: $showExtensionBtn");
 
-    _timer = Timer.periodic(const Duration(minutes: 15), (timer) async {
-      final shiftEnd = DateTime.parse(shift['ShiftEnd']);
-      final now = DateTime.now();
-      final duration = now.difference(shiftEnd);
+    if (shift['ShiftStatus'].toString().contains("Progress")) {
+      _timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+        final shiftEnd = DateTime.parse(shift['ShiftEnd']).toUtc().toLocal();
+        final now = DateTime.now();
+        final duration = now.difference(shiftEnd);
+        log("$shiftEnd fsdf $now");
 
-      if (now.isAfter(shiftEnd) && showExtensionBtn) {
-        setState(() {
-          showExtensionBtn = false;
-        });
-        timer.cancel();
-
-        // End shift if no extension request is made
-        if (extensionData.isEmpty) {
-          await _changeShiftStatus('Completed', shift['ShiftID'],
-              reason: 'Shift ended late by ${duration.inMinutes} minutes');
+        log("in timer: $showExtensionBtn");
+        if (now.isAfter(shiftEnd)) {
+          // Shift has ended
+          if (showExtensionBtn) {
+            if (mounted) {
+              setState(() {
+                showExtensionBtn = false;
+              });
+            }
+          }
+          timer.cancel();
+          log("Shift ended, timer cancelled.");
+        } else if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15)))) {
+          // Within 15 minutes before shift end
+          if (!showExtensionBtn) {
+            if (mounted) {
+              setState(() {
+                showExtensionBtn = true;
+              });
+            }
+          }
+        } else {
+          // Before the 15-minute window
+          if (showExtensionBtn) {
+            if (mounted) {
+              setState(() {
+                showExtensionBtn = false;
+              });
+            }
+          }
         }
-      } else if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15))) &&
-          !showExtensionBtn) {
-        setState(() {
-          showExtensionBtn = true;
-        });
-      } else {
-        setState(() {
-          showExtensionBtn = false;
-        });
-      }
 
-      final extensionRequestExists = await _checkExtensionRequestExists();
-      if (extensionRequestExists) {
-        setState(() {
-          showExtensionBtn = false;
-        });
-        timer.cancel();
-      }
-    });
+        log("afer timer: $showExtensionBtn");
+
+        final extensionRequestExists = await _checkExtensionRequestExists();
+        if (extensionRequestExists) {
+          if (mounted) {
+            setState(() {
+              showExtensionBtn = false;
+            });
+          }
+          timer.cancel();
+        }
+      });
+    }
   }
 
   Future<void> _fetchClientData({required int clientID}) async {
@@ -595,14 +646,11 @@ class _ShiftDetailsState extends State<ShiftDetails>
         });
       } else {
         log('No data found for ShiftID: $shiftID');
-        // Optionally, handle this case by showing an error or navigating back
       }
     }).catchError((error) {
       log('Error fetching shift data: $error');
-      // Optionally, handle the error by showing a dialog or navigating back
     });
   }
-
 
   void _getPfp(profilePhoto) async {
     try {
@@ -630,16 +678,19 @@ class _ShiftDetailsState extends State<ShiftDetails>
 
   Future<void> _makeTimeSheetEntry(shift) async {
     final workerID = await Prefs.getWorkerID();
-
     final data = {
       'ShiftId': shift['ShiftID'],
       'ServiceCode': shift['ServiceCode'],
-      'ClientId': shift['ClientID'],
-      'TlId': clientData['CaseManager'],
+      'ClientId': widget.isLoc == false ? shift['ClientID'] : 0,
+      'TlId': widget.isLoc == false
+          ? clientData['CaseManager']
+          : shiftLocationData['CaseManager'] ?? 7,
       'TlRemarks':
           workerID == clientData['CaseManager'] ? 'Worker is TL' : null,
       'TlStatus': workerID == clientData['CaseManager'] ? 'A' : 'U',
-      'RmId': clientData['CaseManager2'],
+      'RmId': widget.isLoc == false
+          ? clientData['CaseManager2']
+          : shiftLocationData['CaseManager'] ?? 7,
       'RmRemarks': null,
       'RmStatus': 'U',
       'WorkerRemarks': null,
@@ -665,7 +716,10 @@ class _ShiftDetailsState extends State<ShiftDetails>
     String status;
     if (type == 'start') {
       status = 'In Progress';
+      log("_makeTimeSheetEntry call");
       await _makeTimeSheetEntry(shift);
+      _checkExtensionBtn();
+      log("_makeTimeSheetEntry complete");
     } else if (type == 'end') {
       final shiftEnd = DateTime.parse(shift['ShiftEnd']);
       final now = DateTime.now();
@@ -684,12 +738,20 @@ class _ShiftDetailsState extends State<ShiftDetails>
 
     log('STATUS: $status');
     try {
-      final response = await Api.put('changeShiftStatus', {
-        'ShiftID': shiftID,
-        'ShiftStatus': status,
-        if (reason != null) 'ShiftStatusReason': reason,
-      });
+      log("changeShiftStatus call");
 
+      final response = widget.isLoc == false
+          ? await Api.put('changeShiftStatus', {
+              'ShiftID': shiftID,
+              'ShiftStatus': status,
+              if (reason != null) 'ShiftStatusReason': reason,
+            })
+          : await Api.put('changeLocShiftStatus', {
+              'ShiftID': shiftID,
+              'ShiftStatus': status,
+              if (reason != null) 'ShiftStatusReason': reason,
+            });
+      log("changeShiftStatus complete");
       if (response['success']) {
         log('Shift status changed to $status');
         // Fetch updated shift data
@@ -755,43 +817,68 @@ class _ShiftDetailsState extends State<ShiftDetails>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Card(
-                  elevation: 0,
-                  color: colorScheme.primaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "${shift['ClientFirstName']} ${shift['ClientLastName']} - ${clientData['PreferredName'] ?? ''}",
-                          style: TextStyle(
-                              color: colorScheme.onPrimaryContainer,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+                widget.isLoc == false
+                    ? Card(
+                        elevation: 0,
+                        color: colorScheme.primaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                "${shift['ClientFirstName']} ${shift['ClientLastName']} - ${clientData['PreferredName'] ?? ''}",
+                                style: TextStyle(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '- (idk)',
+                                    style: TextStyle(
+                                        color: colorScheme.onPrimaryContainer),
+                                  ),
+                                  const SizedBox(width: 50),
+                                  Text(
+                                    'Age: ${clientData['Age']}',
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        color: colorScheme.onPrimaryContainer),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '- (idk)',
-                              style: TextStyle(
-                                  color: colorScheme.onPrimaryContainer),
-                            ),
-                            const SizedBox(width: 50),
-                            Text(
-                              'Age: ${clientData['Age']}',
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  color: colorScheme.onPrimaryContainer),
-                            ),
-                          ],
+                      )
+                    : Card(
+                        elevation: 0,
+                        color: colorScheme.primaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                "${shiftLocationData['Description'] ?? "UnknownLocation"}",
+                                style: TextStyle(
+                                    color: colorScheme.onPrimaryContainer,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '- (idk)',
+                                style: TextStyle(
+                                    color: colorScheme.onPrimaryContainer),
+                              ),
+                            ],
+                          ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
                 const SizedBox(height: 20),
                 shift['ClientFirstName'] != null
                     ? CircleAvatar(
@@ -841,25 +928,6 @@ class _ShiftDetailsState extends State<ShiftDetails>
                   ],
                 ),
                 const SizedBox(height: 10),
-                // if (shift['ShiftStatus'].toString().contains('Completed'))
-                //   GestureDetector(
-                //     onTap: () {
-                //       Navigator.of(context).pushNamed('/end_shift',
-                //           arguments: {'shift': shift, 'worker': workerData});
-                //     },
-                //     child: Card(
-                //       color: colorScheme.tertiaryContainer,
-                //       child: Padding(
-                //         padding: const EdgeInsets.all(10.0),
-                //         child: Text(
-                //           'See Shift End Fields',
-                //           style: TextStyle(
-                //               color: colorScheme.onTertiaryContainer,
-                //               fontSize: 16),
-                //         ),
-                //       ),
-                //     ),
-                //   ),
                 if ((shift['ShiftStatus'] == 'Not Started' ||
                         shift['ShiftStatus'] == 'Confirmed') &&
                     DateTime.now().day ==
@@ -890,7 +958,11 @@ class _ShiftDetailsState extends State<ShiftDetails>
                         fontWeight: FontWeight.bold,
                       ),
                       onSubmit: () async {
-                        await _changeShiftStatus('start', shift['ShiftID']);
+                        widget.isLoc == false
+                            ? await _changeShiftStatus(
+                                'start', shift['ShiftID'])
+                            : await _changeShiftStatus(
+                                'start', widget.shift['ShiftID']);
                       },
                     ),
                   ),
@@ -938,7 +1010,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
                             )
                           : const SizedBox.shrink(),
                     if (shift['ShiftStatus'] == 'In Progress' &&
-                        !showExtensionBtn) ...[
+                        showExtensionBtn) ...[
                       const SizedBox(width: 10),
                       IconButton(
                         onPressed: () async {
@@ -1130,9 +1202,10 @@ class _ShiftDetailsState extends State<ShiftDetails>
                                 ),
                                 Text(
                                   DateFormat('hh:mm aa').format(
-                                      DateTime.parse(shift['ShiftEnd'])
-                                          .toUtc()
-                                          .toLocal()),
+                                    DateTime.parse(shift['ShiftEnd'])
+                                        .toUtc()
+                                        .toLocal(),
+                                  ),
                                   style: TextStyle(
                                       color: colorScheme.primary,
                                       fontSize: 16,
@@ -1182,36 +1255,66 @@ class _ShiftDetailsState extends State<ShiftDetails>
                   ),
                 ),
                 const SizedBox(height: 10),
-                Card(
-                  elevation: 0,
-                  color: colorScheme.secondaryContainer,
-                  child: Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ShiftDetails3rdCard(
-                          title: 'Case Manager: ',
-                          subtitle: clientData['CaseManager'] ?? '-',
+                widget.isLoc == false
+                    ? Card(
+                        elevation: 0,
+                        color: colorScheme.secondaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ShiftDetails3rdCard(
+                                title: 'Case Manager: ',
+                                subtitle: clientData['CaseManager'] ?? '-',
+                              ),
+                              ShiftDetails3rdCard(
+                                title: 'Tasks Required: ',
+                                subtitle: shift['ServiceDescription'] ??
+                                    shift['ServiceCode'],
+                              ),
+                              ShiftDetails3rdCard(
+                                title: 'Location: ',
+                                subtitle:
+                                    '${clientData['AddressLine1'] ?? ''} ${clientData['AddressLine2'] ?? ''} ${clientData['Suburb'] ?? ''} ${clientData['Postcode'] ?? ''}',
+                              ),
+                              ShiftDetails3rdCard(
+                                title: 'DOB: ',
+                                subtitle: clientData['DOB'] ?? '',
+                              ),
+                            ],
+                          ),
                         ),
-                        ShiftDetails3rdCard(
-                          title: 'Tasks Required: ',
-                          subtitle: shift['ServiceDescription'] ?? '-',
+                      )
+                    : Card(
+                        elevation: 0,
+                        color: colorScheme.secondaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ShiftDetails3rdCard(
+                                title: 'Case Manager: ',
+                                subtitle:
+                                    shiftLocationData['CaseManager'] ?? '-',
+                              ),
+                              ShiftDetails3rdCard(
+                                title: 'Tasks Required: ',
+                                subtitle: shift['ServiceDescription'] ??
+                                    shift['ServiceCode'],
+                              ),
+                              ShiftDetails3rdCard(
+                                title: 'Location: ',
+                                subtitle:
+                                    '${shiftLocationData['Description'] ?? ''}',
+                              ),
+                            ],
+                          ),
                         ),
-                        ShiftDetails3rdCard(
-                          title: 'Location: ',
-                          subtitle:
-                              '${clientData['AddressLine1'] ?? ''} ${clientData['AddressLine2'] ?? ''} ${clientData['Suburb'] ?? ''} ${clientData['Postcode'] ?? ''}',
-                        ),
-                        ShiftDetails3rdCard(
-                          title: 'DOB: ',
-                          subtitle: clientData['DOB'] ?? '',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ],
             ),
           ),
@@ -1247,6 +1350,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
                   'shift': shift,
                   'worker': workerData,
                   'KM': totalDistanceKm,
+                  "isLoc": widget.isLoc,
                 };
                 if (mounted) {
                   Navigator.of(context).pop();

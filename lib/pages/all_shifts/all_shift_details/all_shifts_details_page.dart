@@ -4,23 +4,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/badgeIcon.dart';
-import 'package:m_worker/pages/shift/sub_pages/shift_add_note_photo.dart';
-import 'package:m_worker/pages/shift/sub_pages/shift_details.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/shift_add_note_photo.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/shift_details.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/shift_incident/shift_incident_dialog.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/shift_profile.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/shift_profile_details/shift_profile_details_page.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_notes.dart';
-import 'package:m_worker/pages/shift/sub_pages/shift_profile.dart';
 import 'package:m_worker/pages/shift/sub_pages/shift_split_details.dart';
 import 'package:m_worker/utils/api.dart';
 
-import '../../components/shift_detail/shift_incident/shift_incident.dart';
+class AllShiftsDetailsPage extends StatefulWidget {
+  final bool isLoc;
+  final int shiftID;
 
-class ShiftRoot extends StatefulWidget {
-  const ShiftRoot({super.key});
+  const AllShiftsDetailsPage(
+      {super.key, required this.isLoc, required this.shiftID});
 
   @override
-  State<ShiftRoot> createState() => _ShiftRootState();
+  State<AllShiftsDetailsPage> createState() => _AllShiftsDetailsPageState();
 }
 
-class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
+class _AllShiftsDetailsPageState extends State<AllShiftsDetailsPage>
+    with TickerProviderStateMixin {
   Map<String, dynamic> shiftData = {};
   List<dynamic> clientmWorkerData = [];
   late TabController _tabController;
@@ -35,37 +40,51 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _fetchShiftData(widget.shiftID);
     _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final shiftArguments = ModalRoute.of(context)!.settings.arguments;
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
-    log("$shiftArguments ");
-
-    if (shiftArguments is Map<String, dynamic>) {
-      log("$shiftArguments ");
-      shiftData = Map<String, dynamic>.from(shiftArguments);
-      _fetchShiftData(shiftData['ShiftID']);
+  String _fetchShiftDataEndPoint() {
+    if (widget.isLoc == true) {
+      return 'getApprovedLocRosterShiftMainDataByShiftId';
+    } else {
+      return 'getApprovedShifts';
     }
-    hasAppNote =
-        shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
-    _fetchClientmWorkerData();
   }
 
   Future<void> _fetchShiftData(shiftID) async {
     setState(() {
       isLoading = true;
     });
+    final endPoint = _fetchShiftDataEndPoint();
+    log('${widget.isLoc}');
     log('Fetching shift data for ShiftID: $shiftID');
-    await Api.get('getApprovedShifts/$shiftID').then((response) {
+    log('Fetching endPoint: $endPoint');
+    await Api.get('$endPoint/$shiftID').then((response) {
       setState(() {
         shiftData = response['data'][0];
       });
     });
+    log("shiftdata: $shiftData");
+    log("before note: $hasAppNote");
+    log("widget.isLoc ${widget.isLoc}");
+    widget.isLoc == false
+        ? _fetchClientmWorkerData()
+        : shiftAlert = shiftData['AlertNote'] ?? '';
+    if (mounted && shiftAlert.isNotEmpty && !_isDialogShown) {
+      _isDialogShown = true;
+      _showShiftAlert();
+    }
     await _fetchIfSplitExists(shiftID);
+    hasAppNote =
+        shiftData['AppNote'] != null && shiftData['AppNote'].isNotEmpty;
+    log("note: $hasAppNote");
     setState(() {
       isLoading = false;
     });
@@ -75,7 +94,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
     log('Checking if split exists for ShiftID: $shiftID');
     try {
       final response = await Api.get('doesShiftSplitExist/$shiftID');
-      log('Response from API: ${response.toString()}');
+      log('Response from doesShiftSplitExist API: ${response.toString()}');
       if (response['data']) {
         setState(() {
           _isSplit = true;
@@ -98,7 +117,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
 
   Future<void> _fetchClientmWorkerData() async {
     try {
-      log("clientID: ${shiftData["ClientID"]}");
+      log("clientID _fetchClientmWorkerData: ${shiftData["ClientID"]}");
       final response =
           await Api.get('getClientDetailsVWorkerData/${shiftData["ClientID"]}');
       log("getClientDetailsVWorkerData: $response");
@@ -110,8 +129,8 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
         hasProfile = clientmWorkerData.isNotEmpty;
       });
       log('clientmWorkerData : ${clientmWorkerData.toString()}');
-      if (shiftAlert.isNotEmpty && !_isDialogShown) {
-        _isDialogShown = true; // Set flag to true
+      if (mounted && shiftAlert.isNotEmpty && !_isDialogShown) {
+        _isDialogShown = true;
         _showShiftAlert();
       }
     } catch (e) {
@@ -188,8 +207,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       hasAppNote
-                          ? const BadgeIcon(
-                              icon: Icons.note_outlined, badgeCount: 1)
+                          ? BadgeIcon(icon: Icons.note_outlined, badgeCount: 1)
                           : const Icon(Icons.note_outlined),
                       const SizedBox(width: 4),
                       const Text('Notes'),
@@ -227,10 +245,13 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                             color: colorScheme.onSecondary),
                         onPressed: () {
                           // Handle Incident button
-                          showShiftIncident(
-                              context,
-                              shiftData['ClientID'].toString(),
-                              shiftData['SupportWorker1'].toString());
+                          widget.isLoc == false
+                              ? showShiftIncident(
+                                  context,
+                                  shiftData['ClientID'].toString(),
+                                  '',
+                                )
+                              : showCreateIncidentDialog(context, shiftData);
                         },
                       ),
                       Text('Incident',
@@ -247,7 +268,11 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                         icon: Icon(Icons.upload_file_rounded,
                             color: colorScheme.onSecondary),
                         onPressed: () {
-                          showShiftAddNotePhoto(context, shiftData['ClientID']);
+                          widget.isLoc == false
+                              ? showShiftAddNotePhoto(
+                                  context, shiftData['ClientID'], false)
+                              : showShiftAddNotePhoto(
+                                  context, shiftData['LocationId'], true);
                         },
                       ),
                       Text('Add Note',
@@ -269,11 +294,21 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                             : Icon(Icons.person_pin,
                                 color: colorScheme.onSecondary),
                         onPressed: () {
-                          showShiftProfileDialog(
-                              context,
-                              clientmWorkerData.isNotEmpty
-                                  ? clientmWorkerData[0]
-                                  : {});
+                          widget.isLoc == false
+                              ? showShiftProfileDialog(
+                                  context,
+                                  clientmWorkerData.isNotEmpty
+                                      ? clientmWorkerData[0]
+                                      : {})
+                              : Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ShiftProfileDetailsPage(
+                                      shift: shiftData,
+                                    ),
+                                  ),
+                                );
                         },
                       ),
                       Text('Profile',
@@ -316,6 +351,7 @@ class _ShiftRootState extends State<ShiftRoot> with TickerProviderStateMixin {
                               )
                             : ShiftDetails(
                                 shift: shiftData,
+                                isLoc: widget.isLoc,
                                 onStatusChanged: _updateShiftStatus,
                               ),
                         ShiftNotes(
@@ -393,11 +429,109 @@ void showShiftProfileDialog(
   );
 }
 
-void showShiftAddNotePhoto(BuildContext context, clientID) {
+void showShiftAddNotePhoto(BuildContext context, clientID, isLoc) {
   showDialog(
     context: context,
     builder: (context) {
-      return ShiftAddNotePhoto(clientID: clientID);
+      return ShiftAddNotePhoto(
+        clientID: clientID,
+        isLoc: isLoc,
+      );
+    },
+  );
+}
+
+void showCreateIncidentDialog(
+    BuildContext context, Map<String, dynamic> shiftData) {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return BlocBuilder<ThemeBloc, ThemeMode>(
+            builder: (context, state) {
+              final colorScheme = Theme.of(context).colorScheme;
+              return Dialog(
+                child: Material(
+                  color: colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Container(
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Create Incident?',
+                          style: TextStyle(
+                              color: colorScheme.tertiary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Are you going to create the incident for a client or for a location?',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ShiftProfileDetailsPage(
+                                      shift: shiftData,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Text(
+                                'YES, GO TO CLIENT LIST',
+                                style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(height: 15),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.pop(context);
+                                showShiftIncident(
+                                  context,
+                                  '',
+                                  shiftData['LocationId'].toString(),
+                                );
+                              },
+                              child: Text(
+                                'NO, STAY HERE FOR LOCATION',
+                                style: TextStyle(
+                                    color: colorScheme.primary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
     },
   );
 }

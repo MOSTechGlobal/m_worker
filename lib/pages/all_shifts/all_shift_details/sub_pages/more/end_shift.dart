@@ -13,19 +13,18 @@ import 'package:m_worker/components/button.dart';
 import 'package:m_worker/components/mFilledTextField.dart';
 import 'package:s3_storage/s3_storage.dart';
 
-import '../../../../utils/api.dart';
-import '../../../../utils/prefs.dart';
+import '../../../../../utils/api.dart';
+import '../../../../../utils/prefs.dart';
 
-class EndSplitShift extends StatefulWidget {
-  const EndSplitShift({super.key});
+class EndShift extends StatefulWidget {
+  const EndShift({super.key});
 
   @override
-  State<EndSplitShift> createState() => _EndSplitShiftState();
+  State<EndShift> createState() => _EndShiftState();
 }
 
-class _EndSplitShiftState extends State<EndSplitShift> {
+class _EndShiftState extends State<EndShift> {
   late Map<dynamic, dynamic> shift = {};
-  late Map splitShift = {};
   late int workerID = 0;
   bool isShiftExtened = false;
   bool isLoading = false;
@@ -38,9 +37,12 @@ class _EndSplitShiftState extends State<EndSplitShift> {
 
   String actualKm = '0.0';
 
-  final List<TextEditingController> _kmNoteControllers = [];
-  final List<TextEditingController> _travelNoteControllers = [];
-  final List<TextEditingController> _timeSheetRemarksControllers = [];
+  bool? isLoc;
+
+  final TextEditingController _kmNoteController = TextEditingController();
+  final TextEditingController _travelNoteController = TextEditingController();
+  final TextEditingController _timeSheetRemarksController =
+      TextEditingController();
   final TextEditingController _extendedMinutesController =
       TextEditingController();
   final TextEditingController _noteController = TextEditingController();
@@ -76,19 +78,11 @@ class _EndSplitShiftState extends State<EndSplitShift> {
     setState(() {
       shift = args['shift'];
       workerID = args['worker']['WorkerID'];
+      _kmNoteController.text = args['KM'].toStringAsFixed(2);
       actualKm = args['KM'].toStringAsFixed(2);
-      splitShift = args['splitShift'];
+      isLoc = args['isLoc'];
     });
-    // Initialize controllers for each split shift
-    for (int i = 1; i <= 4; i++) {
-      if (splitShift.containsKey('s${i}_service_code') &&
-          splitShift['s${i}_service_code'] != '' &&
-          splitShift['s${i}_service_code'] != null) {
-        _kmNoteControllers.add(TextEditingController());
-        _travelNoteControllers.add(TextEditingController());
-        _timeSheetRemarksControllers.add(TextEditingController());
-      }
-    }
+    log('Args: $args');
     _scaffoldMessengerState = ScaffoldMessenger.of(context);
     setState(() {
       isLoading = false;
@@ -100,10 +94,10 @@ class _EndSplitShiftState extends State<EndSplitShift> {
     setState(() {
       isLoading = true;
     });
-
+    log("prev shilftID: ${shift['ShiftID']}");
     try {
-      int shiftID = shift['ShiftID'];
-      final response = await Api.get('checkIfExtensionRequestExists/$shiftID');
+      final response =
+          await Api.get('checkIfExtensionRequestExists/${shift['ShiftID']}');
       log('Response: $response');
       if (response['success'] == true && response['data'] == true) {
         setState(() {
@@ -252,12 +246,28 @@ class _EndSplitShiftState extends State<EndSplitShift> {
     }
 
     log('STATUS: $status');
+    log("isLoc : $isLoc");
     try {
-      final response = await Api.put('changeShiftStatus', {
+      log("isLoc : $isLoc");
+      final response = isLoc == false
+          ? await Api.put('changeShiftStatus', {
+        'ShiftID': shiftID,
+        'ShiftStatus': status,
+        if (reason != null) 'ShiftStatusReason': reason,
+      })
+          : await Api.put('changeLocShiftStatus', {
         'ShiftID': shiftID,
         'ShiftStatus': status,
         if (reason != null) 'ShiftStatusReason': reason,
       });
+
+      // Add additional logging to check if response is null
+      if (response == null) {
+        log('Error: Received a null response from the API');
+        return;
+      }
+
+      log("response['success'] : ${response['success']}");
 
       if (response['success']) {
         log('Shift status changed to $status');
@@ -265,67 +275,49 @@ class _EndSplitShiftState extends State<EndSplitShift> {
           shift['ShiftStatus'] = status;
         });
       } else {
-        log('Error changing shift status');
+        log('Error changing shift status: ${response['error'] ?? 'Unknown error'}');
       }
     } catch (e) {
-      log('Error changing shift status: $e');
+      log('Exception occurred while changing shift status: $e');
     }
   }
 
   Future<void> _timesheetDetails() async {
     log('Updating timesheet details');
-    // todo: endsplit
-    final email = await Prefs.getEmail();
-    for (int i = 0; i < _kmNoteControllers.length; i++) {
-      final data = {
-        'ShiftId': shift['ShiftID'],
-        // 'ShiftStartDate': shift['ShiftStart'],
-        'ShiftStartDate': splitShift['s${i + 1}_start_time'],
-        'Km': _kmNoteControllers[i].text,
-        'TravelNote': _travelNoteControllers[i].text,
-        'WorkerRemarks': _timeSheetRemarksControllers[i].text,
-        'ActualKm': actualKm,
-        'UpdateTime': DateTime.now().toString(),
-        'UpdateBy': email,
-        'ExtendedMinutes': _extendedMinutesController.text,
-      };
+    final endTime = // only current time in hh:mm:ss
+        DateTime.now().toIso8601String().substring(11, 19);
+    final data = {
+      'ShiftId': shift['ShiftID'],
+      'Km': _kmNoteController.text,
+      'TravelNote': _travelNoteController.text,
+      'WorkerRemarks': _timeSheetRemarksController.text,
+      'ActualEndTime': endTime,
+      'ActualKm': actualKm,
+      'ExtendedMinutes': _extendedMinutesController.text,
+    };
 
-      try {
-        log("end data: $data");
-        await Api.post('endSplitShiftInsertTimesheetDetails', data);
-      } catch (e) {
-        log('Error updating timesheet details: $e');
-        return;
+    try {
+      await Api.post('endShiftInsertTimesheetDetails', data);
+      if (mounted && _scaffoldMessengerState != null) {
+        _scaffoldMessengerState!.showSnackBar(
+          const SnackBar(
+              content: Text('Timesheet details updated successfully',
+                  style: TextStyle(fontSize: 16, color: Colors.white))),
+        );
+      }
+    } catch (e) {
+      if (mounted && _scaffoldMessengerState != null) {
+        _scaffoldMessengerState!.showSnackBar(
+          const SnackBar(
+              content: Text('Failed to update timesheet details',
+                  style: TextStyle(fontSize: 16, color: Colors.white))),
+        );
+      }
+    } finally {
+      if (mounted) {
+        Navigator.of(context).pop();
       }
     }
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Shift Ended',
-              style: TextStyle(
-                  fontSize: 18, color: Theme.of(context).colorScheme.primary)),
-          content: Text('Shift has been ended successfully',
-              style: TextStyle(
-                  fontSize: 16, color: Theme.of(context).colorScheme.primary)),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-              },
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.all<Color>(
-                    Theme.of(context).colorScheme.primaryContainer),
-              ),
-              child: Text('OK',
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.primary)),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   Future _saveNote() async {
@@ -397,10 +389,8 @@ class _EndSplitShiftState extends State<EndSplitShift> {
     try {
       if (!isShiftExtened) {
         _endExtension();
-
-
-      }_timesheetDetails();
-
+      }
+      _timesheetDetails();
       _saveNote();
       _changeShiftStatus('end', shift['ShiftID']);
     } catch (e) {
@@ -602,94 +592,63 @@ class _EndSplitShiftState extends State<EndSplitShift> {
                           const SizedBox(height: 10),
                         ] else
                           const SizedBox.shrink(),
-                        for (int i = 0; i < _kmNoteControllers.length; i++) ...[
-                          Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            color:
-                                colorScheme.primaryContainer.withOpacity(0.3),
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Service Code: ${splitShift['s${i + 1}_service_code']}',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.tertiary,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'KM travelled during the shift',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  MFilledtextfield(
-                                    hintText: 'KM',
-                                    colorScheme: colorScheme,
-                                    controller: _kmNoteControllers[i],
-                                    onChanged: (value) {
-                                      _kmNoteControllers[i].text = value;
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'Travel Note',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  MFilledtextfield(
-                                    multiLine: true,
-                                    hintText: 'note',
-                                    colorScheme: colorScheme,
-                                    controller: _travelNoteControllers[i],
-                                    onChanged: (value) {
-                                      _travelNoteControllers[i].text = value;
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                    'TimeSheet Remarks',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: colorScheme.primary,
-                                    ),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                  MFilledtextfield(
-                                    multiLine: true,
-                                    hintText: 'Remarks',
-                                    colorScheme: colorScheme,
-                                    controller: _timeSheetRemarksControllers[i],
-                                    onChanged: (value) {
-                                      _timeSheetRemarksControllers[i].text =
-                                          value;
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
+                        Text(
+                          'KM travelled during the shift',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
                           ),
-                          const SizedBox(height: 10),
-                          const Divider(),
-                        ],
+                          textAlign: TextAlign.start,
+                        ),
+                        MFilledtextfield(
+                          hintText: 'KM',
+                          colorScheme: colorScheme,
+                          controller: _kmNoteController,
+                          onChanged: (value) {
+                            _kmNoteController.text = value;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Travel Note',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                        MFilledtextfield(
+                          multiLine: true,
+                          hintText: 'note',
+                          colorScheme: colorScheme,
+                          controller: _travelNoteController,
+                          onChanged: (value) {
+                            _travelNoteController.text = value;
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'TimeSheet Remarks',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.start,
+                        ),
+                        MFilledtextfield(
+                          multiLine: true,
+                          hintText: 'Remarks',
+                          colorScheme: colorScheme,
+                          controller: _timeSheetRemarksController,
+                          onChanged: (value) {
+                            _timeSheetRemarksController.text = value;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        const Divider(),
                         const SizedBox(height: 10),
                         Text(
                           'Note',

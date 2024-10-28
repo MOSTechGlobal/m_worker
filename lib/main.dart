@@ -10,6 +10,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:m_worker/components/notification/notif_popup.dart';
 import 'package:m_worker/login_page.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
+import 'package:m_worker/pages/all_shifts/all_shift_details/sub_pages/more/end_shift.dart';
+import 'package:m_worker/pages/all_shifts/all_shifts_page.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
@@ -18,7 +20,6 @@ import 'package:m_worker/pages/shift/shift_root.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/client_documents.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/add_client_expenses.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/client_expenses/client_expenses.dart';
-import 'package:m_worker/pages/shift/sub_pages/more/end_shift.dart';
 import 'package:m_worker/pages/shift/sub_pages/more/end_split_shift.dart';
 import 'package:m_worker/pages/timesheets.dart';
 import 'package:m_worker/themes.dart';
@@ -155,6 +156,7 @@ class MyApp extends StatelessWidget {
               '/training_qualification': (context) =>
                   const TrainingQualification(),
               '/documents': (context) => const Documents(),
+              '/all_shifts_page': (context) => const AllShiftPage(),
               '/availability': (context) => const WorkerAvailability(),
               '/id_card': (context) => const IdCard(),
               '/timesheets': (context) => const Timesheets(),

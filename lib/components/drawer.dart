@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
+import 'package:m_worker/pages/all_shifts/all_shifts_page.dart';
 import 'package:m_worker/pages/availability.dart';
 import 'package:m_worker/pages/documents.dart';
 import 'package:m_worker/pages/id_card.dart';
@@ -55,6 +56,20 @@ class mDrawer extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.calendar_month),
+            title: const Text('Shifts'),
+            onTap: () {
+              _slideRoute(context, '/all_shifts_page');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.access_time_rounded),
+            title: const Text('Timesheets'),
+            onTap: () {
+              _slideRoute(context, '/timesheets');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.file_present),
             title: const Text('Documents'),
             onTap: () {
@@ -66,13 +81,6 @@ class mDrawer extends StatelessWidget {
             title: const Text('Leave Requests'),
             onTap: () {
               Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.access_time_rounded),
-            title: const Text('Timesheets'),
-            onTap: () {
-              _slideRoute(context, '/timesheets');
             },
           ),
           ListTile(
@@ -186,19 +194,19 @@ class mDrawer extends StatelessWidget {
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             _getRouteWidget(context, routeName),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          const begin = Offset(1.0, 0.0);
-          const end = Offset.zero;
-          const curve = Curves.ease;
-
-          var tween =
-              Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-
-          return SlideTransition(
-            position: animation.drive(tween),
-            child: child,
-          );
-        },
+        // transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        //   const begin = Offset(1.0, 0.0);
+        //   const end = Offset.zero;
+        //   const curve = Curves.ease;
+        //
+        //   var tween =
+        //       Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        //
+        //   return SlideTransition(
+        //     position: animation.drive(tween),
+        //     child: child,
+        //   );
+        // },
       ),
     );
   }
@@ -217,6 +225,8 @@ class mDrawer extends StatelessWidget {
         return const IdCard();
       case '/timesheets':
         return const Timesheets();
+      case '/all_shifts_page':
+        return const AllShiftPage();
       case '/':
         return const HomePage(); // Replace with your actual widget for the home page
       default:
