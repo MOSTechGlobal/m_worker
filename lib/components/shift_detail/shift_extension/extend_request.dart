@@ -187,18 +187,8 @@ class _ExtendRequestDialogState extends State<ExtendRequestDialog> {
         log('Extension Request Response: $response');
       }
 
-      // todo notify
-      Api.post('sendNotificationToID', {
-        'id': 'us_${widget.workerData['CaseManager']}',
-        'title':
-            'Extension requested for shift ${widget.shiftData['ShiftID']} #${response['insertId']}',
-        'body':
-            'Worker ${widget.workerData['WorkerID']} has requested an extension for shift ${widget.shiftData['ShiftID']} with reason: ${_extensionReasonController.text}',
-        'data': {
-          'type': 'shift_extension',
-          'shiftID': widget.shiftData['ShiftID'],
-          'workerID': widget.workerData['WorkerID'],
-        },
+      Api.post('sendRequestNotificationToShiftExtensionID', {
+        'extId': response['data']['insertId'],
       });
 
       Navigator.of(context).pop();
