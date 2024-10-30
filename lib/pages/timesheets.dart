@@ -118,22 +118,24 @@ class _TimesheetsState extends State<Timesheets> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return WillPopScope(
-          onWillPop: () async => false,
+        return PopScope(
+          canPop: false,
           child: AlertDialog(
-            content: Column(
+            content: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(width: 50),
                 if (message != null)
-                  Text(message,
-                      style: TextStyle(
-                          fontSize: 16,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(.5))),
+                  Expanded(
+                    child: Text(message,
+                        style: TextStyle(
+                            fontSize: 18,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(.5))),
+                  ),
               ],
             ),
           ),
@@ -298,33 +300,59 @@ class _TimesheetsState extends State<Timesheets> {
     }
   }
 
+  bool bypassEnabled = false; // Flag to track if bypass was selected todo remove
   Future<void> _submitBtn() async {
-    _showLoadingDialog(context, message: 'Submitting timesheet...');
     final now = DateTime.now();
-    // if today is not the week end day
-    if (now.weekday != 7 && now.weekday != 6) {
+    // Check if it's the weekend and if bypass is not enabled
+    if ((now.weekday != 7 && now.weekday != 6) && !bypassEnabled) {
       showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Error', style: TextStyle(color: Colors.red)),
-              content: const Text(
-                  'You can only submit timesheets on Weekend. Please try again on weekends.',
-                  style: TextStyle(color: Colors.red, fontSize: 16)),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('OK',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.tertiary)),
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            title: Text(
+              'Not Weekend',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            content: Text(
+              'You can only submit timesheets on weekends. Please try again on weekends.',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onErrorContainer,
+                fontSize: 16,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    bypassEnabled = true; // Enable bypass
+                  });
+                  _submitBtn(); // Retry submission with bypass enabled
+                },
+                child: Text(
+                  'Bypass',
+                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
                 ),
-              ],
-            );
-          });
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'OK',
+                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
+                ),
+              ),
+            ],
+          );
+        },
+      );
       return;
     }
+
+    // Proceed with submission if it's the weekend or bypass is enabled
+    _showLoadingDialog(context, message: 'Submitting timesheet...');
     int count = 0;
     List errors = [];
     final weekStart = getWeekStart(selectedDate);
@@ -362,6 +390,8 @@ class _TimesheetsState extends State<Timesheets> {
         log('Error saving shift data: $e');
       }
     }
+
+    // Show success or error messages based on submission results
     if (count == weekShifts.length) {
       final email = await Prefs.getEmail();
       await Api.post('sendNotificationToID', {
@@ -373,33 +403,40 @@ class _TimesheetsState extends State<Timesheets> {
       });
       Navigator.of(context).pop();
       showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title:
-                  const Text('Success', style: TextStyle(color: Colors.green)),
-              content: Text(
-                  'This week\'s timesheet has been submitted, your TL will review it shortly.',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 16)),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: Text('OK',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.tertiary)),
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Success', style: TextStyle(color: Colors.green)),
+            content: Text(
+              'This week\'s timesheet has been submitted, your TL will review it shortly. ${DateFormat('dd/MM/yyyy').format(weekStart)} - ${DateFormat('dd/MM/yyyy').format(weekEnd)}',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 16,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'OK',
+                  style: TextStyle(color: Theme.of(context).colorScheme.tertiary),
                 ),
-              ],
-            );
-          });
+              ),
+            ],
+          );
+        },
+      );
+      setState(() {
+        bypassEnabled = false; // Reset bypass flag
+      });
     } else {
       final snackBar = SnackBar(
-        content: Text('Error saving shift data, please try again later',
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onErrorContainer)),
+        content: Text(
+          'Error saving shift data, please try again later',
+          style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer),
+        ),
         duration: const Duration(seconds: 5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
@@ -439,7 +476,7 @@ class _TimesheetsState extends State<Timesheets> {
             actions: [
               // submit button
               IconButton(
-                icon: const Icon(Icons.save),
+                icon: const Icon(Icons.file_download_done),
                 onPressed: _submitBtn,
               ),
               IconButton(

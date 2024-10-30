@@ -52,7 +52,7 @@ class _ShiftProfileDetailsPageState extends State<ShiftProfileDetailsPage> {
     log("workerIDs $workerIDs");
 
     final responseData =
-        await Api.post('getClientDataFromList', {"ids": workerIDs});
+        await Api.post('getWorkerDataFromList', {"ids": workerIDs});
 
     if (responseData != null &&
         responseData['success'] &&
@@ -122,12 +122,13 @@ class _ShiftProfileDetailsPageState extends State<ShiftProfileDetailsPage> {
                           displayedClients.isNotEmpty
                               ? Column(
                                   mainAxisAlignment: MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       "Clients",
-                                      style: TextStyle(fontSize: 18),
+                                      style: TextStyle(fontSize: 18, color: colorScheme.primary.withOpacity(0.5)),
                                     ),
-                                    const SizedBox(height: 15),
+                                    const SizedBox(height: 5),
                                     ListView.builder(
                                       physics:
                                           const NeverScrollableScrollPhysics(),
@@ -159,10 +160,11 @@ class _ShiftProfileDetailsPageState extends State<ShiftProfileDetailsPage> {
                               : Container(),
                           displayedWorkers.isNotEmpty
                               ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       "Workers",
-                                      style: TextStyle(fontSize: 18),
+                                      style: TextStyle(fontSize: 18, color: colorScheme.primary.withOpacity(0.5)),
                                     ),
                                     const SizedBox(height: 15),
                                     // Workers Section

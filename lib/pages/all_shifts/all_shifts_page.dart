@@ -300,119 +300,112 @@ class _AllShiftPageState extends State<AllShiftPage> {
               ],
             ),
           ),
-          body: AnimatedOpacity(
-            opacity: isLoading ? 0.5 : 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: isLoading
-                ? const Center(
-                    child: SizedBox(
-                    width: 150,
-                    child: LinearProgressIndicator(),
-                  ))
-                : Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _showDatePickerModal(context),
-                              child: Card(
-                                color: colorScheme.secondaryContainer,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  child: Text(
-                                    _getFormattedDateRange() ??
-                                        'Select Date Range',
-                                    style: TextStyle(
-                                      color: colorScheme.primary,
-                                      fontSize: 16,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
+          body: Column(
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showDatePickerModal(context),
+                      child: Card(
+                        color: colorScheme.secondaryContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Text(
+                            _getFormattedDateRange() ?? 'Select Date Range',
+                            style: TextStyle(
+                              color: colorScheme.primary,
+                              fontSize: 16,
                             ),
-                          ],
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: IntrinsicWidth(
-                              child: SegmentedButton<String>(
-                                emptySelectionAllowed: false,
-                                style: ButtonStyle(
-                                  visualDensity: VisualDensity.compact,
-                                  enableFeedback: true,
-                                  foregroundColor:
-                                      WidgetStateProperty.resolveWith<Color>(
-                                    (Set<WidgetState> states) {
-                                      if (states
-                                          .contains(WidgetState.disabled)) {
-                                        return colorScheme.secondary;
-                                      }
-                                      return colorScheme.secondary;
-                                    },
-                                  ),
-                                  animationDuration:
-                                      const Duration(milliseconds: 300),
-                                ),
-                                segments: const <ButtonSegment<String>>[
-                                  ButtonSegment<String>(
-                                      value: 'StandardShifts',
-                                      label: Text('Standard Shifts')),
-                                  ButtonSegment<String>(
-                                      value: 'LocationShifts',
-                                      label: Text('Location Shifts')),
-                                ],
-                                selected: {selectedSegment},
-                                onSelectionChanged: (Set<String> newSelection) {
-                                  setState(() {
-                                    selectedSegment = newSelection.first;
-                                    isLoading = true;
-                                  });
-                                  if (selectedSegment == 'StandardShifts') {
-                                    _fetchPAShifts().then((_) {
-                                      setState(() {
-                                        isLoading = false;
-                                      });
-                                    });
-                                  } else if (selectedSegment ==
-                                      'LocationShifts') {
-                                    _fetchLocationShifts().then((_) {
-                                      setState(() {
-                                        isLoading = false;
-                                      });
-                                    });
-                                  }
-                                },
-                                showSelectedIcon: false,
-                              ),
-                            ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: IntrinsicWidth(
+                      child: SegmentedButton<String>(
+                        emptySelectionAllowed: false,
+                        style: ButtonStyle(
+                          visualDensity: VisualDensity.compact,
+                          enableFeedback: true,
+                          foregroundColor:
+                              WidgetStateProperty.resolveWith<Color>(
+                            (Set<WidgetState> states) {
+                              if (states.contains(WidgetState.disabled)) {
+                                return colorScheme.secondary;
+                              }
+                              return colorScheme.secondary;
+                            },
                           ),
+                          animationDuration: const Duration(milliseconds: 300),
+                        ),
+                        segments: const <ButtonSegment<String>>[
+                          ButtonSegment<String>(
+                              value: 'StandardShifts',
+                              label: Text('Standard Shifts')),
+                          ButtonSegment<String>(
+                              value: 'LocationShifts',
+                              label: Text('Location Shifts')),
                         ],
+                        selected: {selectedSegment},
+                        onSelectionChanged: (Set<String> newSelection) {
+                          setState(() {
+                            selectedSegment = newSelection.first;
+                            isLoading = true;
+                          });
+                          if (selectedSegment == 'StandardShifts') {
+                            _fetchPAShifts().then((_) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                            });
+                          } else if (selectedSegment == 'LocationShifts') {
+                            _fetchLocationShifts().then((_) {
+                              setState(() {
+                                isLoading = false;
+                              });
+                            });
+                          }
+                        },
+                        showSelectedIcon: false,
                       ),
-                      errorMessage != null
-                          ? Center(
-                              child: Text(errorMessage!,
-                                  style: TextStyle(color: colorScheme.primary)))
-                          : Expanded(
-                              child: selectedSegment == 'StandardShifts'
-                                  ? _buildStandardShifts()
-                                  : selectedSegment == 'LocationShifts'
-                                      ? _buildLocationShifts()
-                                      : Container(),
-                            ),
-                    ],
+                    ),
                   ),
+                ],
+              ),
+              isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        width: 150,
+                        child: LinearProgressIndicator(),
+                      ),
+                    )
+                  : errorMessage != null
+                      ? Center(
+                          child: Text(errorMessage!,
+                              style: TextStyle(color: colorScheme.primary)))
+                      : Expanded(
+                          child: selectedSegment == 'StandardShifts'
+                              ? _buildStandardShifts()
+                              : selectedSegment == 'LocationShifts'
+                                  ? _buildLocationShifts()
+                                  : Container(),
+                        ),
+            ],
           ),
         );
       },
@@ -574,8 +567,6 @@ class _AllShiftPageState extends State<AllShiftPage> {
   }
 
   Widget _buildShiftCard(Map<String, dynamic> shift, ColorScheme colorScheme) {
-    bool isSelected = shift['isSelected'] ?? false;
-
     // Determine the display name based on the selected segment
     String displayName = selectedSegment == 'LocationShifts'
         ? (shift['LocationDescription'] ??
@@ -587,16 +578,17 @@ class _AllShiftPageState extends State<AllShiftPage> {
             '${shift['LocationDescription'][0]}') // Fallback if locationName is null
         : '${shift['ClientFirstName'][0]} ${shift['ClientLastName'][0]}';
 
-    bool isLoc = selectedSegment == 'LocationShifts'
-        ? true
-        : false;
+    bool isLoc = selectedSegment == 'LocationShifts' ? true : false;
 
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AllShiftsDetailsPage(isLoc: isLoc, shiftID: shift['ShiftID'],),
+            builder: (context) => AllShiftsDetailsPage(
+              isLoc: isLoc,
+              shiftID: shift['ShiftID'],
+            ),
           ),
         );
       },
@@ -604,18 +596,21 @@ class _AllShiftPageState extends State<AllShiftPage> {
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: Stack(
           children: [
-            Positioned(
-              child: isSelected
-                  ? Icon(Icons.check_circle,
-                      color: colorScheme.primary, size: 25)
-                  : Container(),
-            ),
             Card(
               elevation: 0,
-              color: isSelected
-                  ? colorScheme.tertiary
-                      .withOpacity(0.2) // Light background color for selected
-                  : colorScheme.secondaryContainer,
+              borderOnForeground: true,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(
+                  color: shift['ShiftStatus'] == 'In Progress'
+                      ? Colors.yellow
+                      : shift['ShiftStatus'].toString().contains('Completed')
+                      ? Colors.green
+                      : colorScheme.secondary,
+                  width: 3,
+                ),
+              ),
+              color: colorScheme.secondaryContainer,
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(vertical: 10, horizontal: 20),

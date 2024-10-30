@@ -82,7 +82,7 @@ class _IdCardState extends State<IdCard> {
 
       final url = await s3Storage.presignedGetObject(
         'moscaresolutions',
-        '$company/worker/$workerID/profile_picture/pfp.jpg',
+        '$company/worker/$workerID/profile_picture/pfp.png',
       );
       log('URL: $url');
 

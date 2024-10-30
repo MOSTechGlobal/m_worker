@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:m_worker/home_page.dart';
 import 'package:m_worker/pages/account/training_qualification.dart';
@@ -17,6 +18,7 @@ class mDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser?.email;
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -28,12 +30,25 @@ class mDrawer extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'mWorker',
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: colorScheme.primary,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'mWorker',
+                          style: TextStyle(
+                            fontSize: 20,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          '$user',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colorScheme.primary,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 10),
                     IconButton(
@@ -80,21 +95,21 @@ class mDrawer extends StatelessWidget {
             leading: const Icon(Icons.event_busy),
             title: const Text('Leave Requests'),
             onTap: () {
-              Navigator.pushNamed(context, '/profile');
+              //Navigator.pushNamed(context, '/');
             },
           ),
           ListTile(
             leading: const Icon(Icons.warning),
             title: const Text('Incidents'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              //Navigator.pushNamed(context, '/');
             },
           ),
           ListTile(
             leading: const Icon(Icons.edit_note),
             title: const Text('Forms'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              //Navigator.pushNamed(context, '/');
             },
           ),
           ListTile(
@@ -130,28 +145,28 @@ class mDrawer extends StatelessWidget {
             leading: const Icon(Icons.new_releases),
             title: const Text('Invitations'),
             onTap: () {
-              Navigator.pushNamed(context, '/');
+              //Navigator.pushNamed(context, '/');
             },
           ),
           ListTile(
             leading: const Icon(Icons.chat_bubble_outline),
             title: const Text('Group Messages'),
             onTap: () {
-              Navigator.pushNamed(context, '/profile');
+              //Navigator.pushNamed(context, '/profile');
             },
           ),
           ListTile(
             leading: const Icon(Icons.chat_bubble),
             title: const Text('Private Messages'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              //Navigator.pushNamed(context, '/settings');
             },
           ),
           ListTile(
             leading: const Icon(Icons.call),
             title: const Text('Call Office'),
             onTap: () {
-              Navigator.pushNamed(context, '/settings');
+              //Navigator.pushNamed(context, '/settings');
             },
           ),
           Padding(
@@ -180,7 +195,7 @@ class mDrawer extends StatelessWidget {
             leading: const Icon(Icons.check_circle),
             title: const Text('Compliance'),
             onTap: () {
-              Navigator.pushNamed(context, '/profile');
+              //Navigator.pushNamed(context, '/profile');
             },
           ),
         ],

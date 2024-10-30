@@ -59,7 +59,7 @@ class _DocumentsState extends State<Documents> {
     }
   }
 
-  void _fetchData() async {
+  Future<void> _fetchData() async {
     setState(() {
       _isLoading = true;
     });
@@ -84,6 +84,17 @@ class _DocumentsState extends State<Documents> {
   void _uploadDoc() async {
     final documentDetails = await _getDocumentDetails();
     if (documentDetails.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No document to upload',
+              style: TextStyle(
+                color: Colors.white,
+              )),
+          backgroundColor: Colors.red,
+          showCloseIcon: true,
+          closeIconColor: Colors.white,
+        ),
+      );
       return;
     }
 
@@ -110,9 +121,31 @@ class _DocumentsState extends State<Documents> {
 
       if (_uploadState == 1.0) {
         _insertDocument(documentDetails);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document uploaded successfully!',
+                style: TextStyle(
+                  color: Colors.white,
+                )),
+            backgroundColor: Colors.green,
+            showCloseIcon: true,
+            closeIconColor: Colors.white,
+          ),
+        );
       }
     } catch (e) {
       log('Error uploading document: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading document: $e',
+              style: const TextStyle(
+                color: Colors.white,
+              )),
+          backgroundColor: Colors.red,
+          showCloseIcon: true,
+          closeIconColor: Colors.white,
+        ),
+      );
     } finally {
       setState(() {
         _uploadState = 0.0;
@@ -178,11 +211,12 @@ class _DocumentsState extends State<Documents> {
             backgroundColor: colorScheme.primary,
             child: Icon(Icons.add, color: colorScheme.onPrimary),
           ),
-          body: SingleChildScrollView(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                _fetchData();
-              },
+          body: RefreshIndicator(
+            onRefresh: () async {
+              await _fetchData();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 children: [
                   _uploadState == 0.0
@@ -238,15 +272,16 @@ class _DocumentsState extends State<Documents> {
                 Text(
                   doc['DocumentCategoryDescription'],
                   style: TextStyle(
-                    color: colorScheme.primary.withOpacity(0.7),
+                    color: colorScheme.primary.withOpacity(0.5),
                     fontSize: 16,
                   ),
                 ),
                 Text(
                   doc['Note'],
                   style: TextStyle(
-                    color: colorScheme.primary.withOpacity(0.7),
+                    color: colorScheme.secondary,
                     fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -347,6 +382,8 @@ class _DocumentsState extends State<Documents> {
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                     ),
+                    dropdownColor:
+                        Theme.of(context).colorScheme.secondaryContainer,
                     items: documentCategories.map((category) {
                       return DropdownMenuItem(
                         value: category['ID'],

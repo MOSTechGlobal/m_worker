@@ -283,7 +283,7 @@ class _EndShiftState extends State<EndShift> {
         _scaffoldMessengerState!.showSnackBar(
           const SnackBar(
               content: Text('Timesheet details updated successfully',
-                  style: TextStyle(fontSize: 16, color: Colors.white))),
+                  style: TextStyle(fontSize: 16))),
         );
       }
     } catch (e) {
@@ -291,7 +291,7 @@ class _EndShiftState extends State<EndShift> {
         _scaffoldMessengerState!.showSnackBar(
           const SnackBar(
               content: Text('Failed to update timesheet details',
-                  style: TextStyle(fontSize: 16, color: Colors.white))),
+                  style: TextStyle(fontSize: 16))),
         );
       }
     } finally {
@@ -324,7 +324,7 @@ class _EndShiftState extends State<EndShift> {
         _scaffoldMessengerState!.showSnackBar(
           const SnackBar(
               content: Text('Note cannot be empty',
-                  style: TextStyle(fontSize: 16, color: Colors.white))),
+                  style: TextStyle(fontSize: 16))),
         );
       }
     }

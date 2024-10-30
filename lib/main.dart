@@ -167,7 +167,7 @@ class MyApp extends StatelessWidget {
               '/shift_more_client_expenses/add': (context) =>
                   const AddExpense(),
             },
-            debugShowCheckedModeBanner: false,
+            debugShowCheckedModeBanner: true,
             theme: lightTheme,
             themeMode: state,
             darkTheme: darkTheme,

@@ -10,6 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:m_worker/bloc/theme_bloc.dart';
 import 'package:m_worker/components/drawer.dart';
 import 'package:m_worker/components/shift_tile/listTile.dart';
+import 'package:m_worker/login_page.dart';
 import 'package:m_worker/utils/api.dart';
 import 'package:m_worker/utils/api_errors/refresh_token_error_dialog.dart';
 import 'package:m_worker/utils/prefs.dart';
@@ -52,7 +53,11 @@ class _HomePageState extends State<HomePage> {
               TextButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
-                  Navigator.pop(context);
+                  Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginPage()),
+                      (route) => false);
                 },
                 style: TextButton.styleFrom(
                   backgroundColor: colorScheme.errorContainer,
@@ -271,87 +276,97 @@ class _HomePageState extends State<HomePage> {
                       ],
                     ),
                   ),
+                  // Expanded(
+                  //   child: isLoading
+                  //       ? const Center(
+                  //           child: SizedBox(
+                  //             width: 150,
+                  //             child: LinearProgressIndicator(),
+                  //           ),
+                  //         )
+                  //       : errorMessage != null
+                  //           ? Center(
+                  //               child: Text(errorMessage!,
+                  //                   style:
+                  //                       TextStyle(color: colorScheme.primary)))
+                  //           : RefreshIndicator(
+                  //               onRefresh: _fetchWorkerShifts,
+                  //               child: ListView.builder(
+                  //                 itemCount: _selectedSegment.contains('Today')
+                  //                     ? todayShifts.length
+                  //                     : sortedFortnightDates.length,
+                  //                 itemBuilder: (context, index) {
+                  //                   if (_selectedSegment.contains('Today')) {
+                  //                     if (todayShifts.isEmpty) {
+                  //                       return Center(
+                  //                         child: Text('No shifts found',
+                  //                             style: TextStyle(
+                  //                                 color: colorScheme.primary)),
+                  //                       );
+                  //                     } else {
+                  //                       final shift = todayShifts[index];
+                  //                       return mShiftTile(
+                  //                         key: ValueKey(shift['ShiftID']),
+                  //                         date: DateFormat('yyyy-MM-dd').format(
+                  //                             DateTime.parse(
+                  //                                 shift['ShiftStart'])),
+                  //                         shiftsForDate: shift,
+                  //                         colorScheme: colorScheme,
+                  //                       );
+                  //                     }
+                  //                   } else {
+                  //                     final date = sortedFortnightDates[index];
+                  //                     return Column(
+                  //                       crossAxisAlignment:
+                  //                           CrossAxisAlignment.start,
+                  //                       children: [
+                  //                         Padding(
+                  //                           padding: const EdgeInsets.symmetric(
+                  //                               horizontal: 18),
+                  //                           child: Text(
+                  //                             DateFormat('EE d MMMM')
+                  //                                 .format(DateTime.parse(date)),
+                  //                             style: TextStyle(
+                  //                                 fontSize: 16,
+                  //                                 color: colorScheme.secondary),
+                  //                           ),
+                  //                         ),
+                  //                         ListView.builder(
+                  //                           shrinkWrap: true,
+                  //                           physics:
+                  //                               const NeverScrollableScrollPhysics(),
+                  //                           itemCount:
+                  //                               groupedFortnightShifts[date]!
+                  //                                   .length,
+                  //                           itemBuilder: (context, shiftIndex) {
+                  //                             final shift =
+                  //                                 groupedFortnightShifts[date]![
+                  //                                     shiftIndex];
+                  //                             return mShiftTile(
+                  //                               key: ValueKey(shift['ShiftID']),
+                  //                               date: date,
+                  //                               shiftsForDate: shift,
+                  //                               colorScheme: colorScheme,
+                  //                             );
+                  //                           },
+                  //                         ),
+                  //                       ],
+                  //                     );
+                  //                   }
+                  //                 },
+                  //               ),
+                  //             ),
+                  // )
+                  // say that the shifts tiles are not available
                   Expanded(
-                    child: isLoading
-                        ? const Center(
-                            child: SizedBox(
-                              width: 150,
-                              child: LinearProgressIndicator(),
-                            ),
-                          )
-                        : errorMessage != null
-                            ? Center(
-                                child: Text(errorMessage!,
-                                    style:
-                                        TextStyle(color: colorScheme.primary)))
-                            : RefreshIndicator(
-                                onRefresh: _fetchWorkerShifts,
-                                child: ListView.builder(
-                                  itemCount: _selectedSegment.contains('Today')
-                                      ? todayShifts.length
-                                      : sortedFortnightDates.length,
-                                  itemBuilder: (context, index) {
-                                    if (_selectedSegment.contains('Today')) {
-                                      if (todayShifts.isEmpty) {
-                                        return Center(
-                                          child: Text('No shifts found',
-                                              style: TextStyle(
-                                                  color: colorScheme.primary)),
-                                        );
-                                      } else {
-                                        final shift = todayShifts[index];
-                                        return mShiftTile(
-                                          key: ValueKey(shift['ShiftID']),
-                                          date: DateFormat('yyyy-MM-dd').format(
-                                              DateTime.parse(
-                                                  shift['ShiftStart'])),
-                                          shiftsForDate: shift,
-                                          colorScheme: colorScheme,
-                                        );
-                                      }
-                                    } else {
-                                      final date = sortedFortnightDates[index];
-                                      return Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 18),
-                                            child: Text(
-                                              DateFormat('EE d MMMM')
-                                                  .format(DateTime.parse(date)),
-                                              style: TextStyle(
-                                                  fontSize: 16,
-                                                  color: colorScheme.secondary),
-                                            ),
-                                          ),
-                                          ListView.builder(
-                                            shrinkWrap: true,
-                                            physics:
-                                                const NeverScrollableScrollPhysics(),
-                                            itemCount:
-                                                groupedFortnightShifts[date]!
-                                                    .length,
-                                            itemBuilder: (context, shiftIndex) {
-                                              final shift =
-                                                  groupedFortnightShifts[date]![
-                                                      shiftIndex];
-                                              return mShiftTile(
-                                                key: ValueKey(shift['ShiftID']),
-                                                date: date,
-                                                shiftsForDate: shift,
-                                                colorScheme: colorScheme,
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      );
-                                    }
-                                  },
-                                ),
-                              ),
-                  )
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                              "Shifts tiles are shifted to the 'Shifts' option in the menu",
+                              style: TextStyle(color: colorScheme.primary)),
+                        ],
+                      )),
                 ],
               ),
             ),

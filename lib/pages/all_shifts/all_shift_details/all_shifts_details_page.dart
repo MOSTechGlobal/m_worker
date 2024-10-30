@@ -473,12 +473,13 @@ void showCreateIncidentDialog(
                               fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
+                        Text(
                           'Are you going to create the incident for a client or for a location?',
                           style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                            color: colorScheme.primary,
+                              fontSize: 16, fontStyle: FontStyle.italic),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 20),
                         Column(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -503,7 +504,9 @@ void showCreateIncidentDialog(
                                     fontWeight: FontWeight.bold),
                               ),
                             ),
-                            const SizedBox(height: 15),
+                            const SizedBox(height: 7),
+                            const Divider(),
+                            const SizedBox(height: 7),
                             GestureDetector(
                               onTap: () {
                                 Navigator.pop(context);

@@ -54,7 +54,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
   DateTime? breakStartTime;
   bool showEndShiftBtn = true;
   int totalBreakDuration = 0;
-  late StreamSubscription _alarmSubscription;
+  StreamSubscription? _alarmSubscription;
   late Timer _alarmStopTimer;
 
   String? _pfp;
@@ -63,7 +63,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
   Map extensionData = {};
 
   Timer? _timer;
-  late Timer _extensionTimer;
+  Timer? _extensionTimer;
 
   double totalDistanceKm = 0.0;
 
@@ -197,7 +197,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
 
     await Alarm.stop(42);
     player.stop();
-    _alarmSubscription.cancel();
+    _alarmSubscription?.cancel();
     _alarmStopTimer.cancel();
   }
 
@@ -318,7 +318,11 @@ class _ShiftDetailsState extends State<ShiftDetails>
   }
 
   void _initAlarm() async {
+    // If there's an existing subscription, cancel it to avoid multiple listeners
+    await _alarmSubscription?.cancel();
+
     final alreadySubscribed = await Prefs.getAlarmSubscribed();
+
     if (!alreadySubscribed) {
       _alarmSubscription = Alarm.ringStream.stream.listen((event) {
         if (event.id == 42) {
@@ -327,18 +331,20 @@ class _ShiftDetailsState extends State<ShiftDetails>
           });
         }
       });
+
       Prefs.setAlarmSubscribed(true);
     }
   }
+
 
   bool _isDisposed = false;
 
   @override
   void dispose() {
-    _alarmSubscription.cancel();
+    _alarmSubscription?.cancel();
     _timer?.cancel();
     _isDisposed = true;
-    _extensionTimer.cancel();
+    _extensionTimer?.cancel();
     player.dispose();
     super.dispose();
   }
@@ -523,7 +529,8 @@ class _ShiftDetailsState extends State<ShiftDetails>
           }
           timer.cancel();
           log("Shift ended, timer cancelled.");
-        } else if (now.isAfter(shiftEnd.subtract(const Duration(minutes: 15)))) {
+        } else if (now
+            .isAfter(shiftEnd.subtract(const Duration(minutes: 15)))) {
           // Within 15 minutes before shift end
           if (!showExtensionBtn) {
             if (mounted) {
@@ -787,7 +794,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
             extensionData.addAll(response['data'][0]);
           });
           if (extensionData['Status'] == 'A') {
-            _extensionTimer.cancel(); // Stop polling when status is 'A'
+            _extensionTimer?.cancel(); // Stop polling when status is 'A'
             // todo fix sound
             _playSuccessSound();
           }
@@ -796,7 +803,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
         log('No extension data found for ShiftID: ${shift['ShiftID']}');
         if (mounted) {
           setState(() {
-            _extensionTimer.cancel();
+            _extensionTimer?.cancel();
           });
         }
         log('Extension status polling stopped');
@@ -1345,6 +1352,7 @@ class _ShiftDetailsState extends State<ShiftDetails>
             ),
             ElevatedButton(
               onPressed: () async {
+                log('Ending shift...');
                 _stopTracking();
                 final args = {
                   'shift': shift,

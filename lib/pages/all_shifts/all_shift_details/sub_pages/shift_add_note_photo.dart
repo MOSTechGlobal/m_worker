@@ -157,16 +157,19 @@ class _ShiftAddNotePhotoState extends State<ShiftAddNotePhoto> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 5,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter note here',
-                    ),
-                    style: TextStyle(
-                      color: colorScheme.primary,
-                      fontSize: 16,
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _noteController,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter note here',
+                      ),
+                      style: TextStyle(
+                        color: colorScheme.primary,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 10),
